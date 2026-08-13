@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 price_tracker.db
+
+.coverage
+coverage.xml

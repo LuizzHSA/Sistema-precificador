@@ -1,6 +1,7 @@
 class APIClient {
   constructor() {
-    this.baseURL = window.API_BASE_URL || localStorage.getItem('apiBaseURL') || 'http://localhost:5000/api';
+    const developmentURL = window.location.hostname === 'localhost' && window.location.port === '8080' ? 'http://localhost:5000/api' : '/api';
+    this.baseURL = window.API_BASE_URL || localStorage.getItem('apiBaseURL') || developmentURL;
     this.token = localStorage.getItem('token');
   }
   setToken(token) { this.token = token; localStorage.setItem('token', token); }
