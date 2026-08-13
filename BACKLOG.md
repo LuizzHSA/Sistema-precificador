@@ -2,6 +2,11 @@
 
 > Backlog oficial do projeto, organizado por prioridade, sprint, status e critérios de aceite.
 
+## Atualização de implementação — 13/08/2026
+
+A branch `feature/sprints-1-2-complete` contém a implementação integrada dos fluxos de autenticação JWT, catálogo de lojas e produtos, alterações de preço, filtros, dashboard e testes automatizados. A validação atual executou **4 testes, todos aprovados**. A infraestrutura de produção, histórico dedicado, agendamento e notificações permanecem fora do escopo dos Sprints 1 e 2.
+
+
 ## 🎯 Objetivo do produto
 
 Construir um sistema web para cadastrar lojas e produtos, controlar alterações de preços, acompanhar o histórico e permitir a execução controlada de alterações.
@@ -21,8 +26,8 @@ Construir um sistema web para cadastrar lojas e produtos, controlar alterações
 
 | Sprint | Objetivo | Status |
 |---|---|---|
-| Sprint 1 | Fundação, autenticação e integração base | 🟡 Em conclusão |
-| Sprint 2 | Core de alterações de preço + dashboard | 🔴 A iniciar/concluir |
+| Sprint 1 | Fundação, autenticação e integração base | ✅ Concluída |
+| Sprint 2 | Core de alterações de preço + dashboard | ✅ Concluída |
 | Sprint 3 | Produtos, lojas e histórico | ⚪ Planejada |
 | Sprint 4 | Agendamento, notificações e regras | ⚪ Planejada |
 | Sprint 5 | Qualidade, segurança e performance | ⚪ Planejada |

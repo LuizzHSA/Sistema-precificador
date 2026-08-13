@@ -1,47 +1,55 @@
-from flask import Flask
-from flask_cors import CORS
 import os
+from flask import Flask, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
+from sqlalchemy.exc import IntegrityError
 
 from app.config import config
 from app import db, jwt
-from app.routes.price_changes import price_bp
 from app.routes.auth import auth_bp
+from app.routes.price_changes import price_bp
+from app.routes.catalog import catalog_bp
 
 load_dotenv()
 
+
 def create_app(config_name=None):
-    """Factory para criar a aplicação Flask"""
-    
-    if config_name is None:
-        config_name = os.getenv('FLASK_ENV', 'development')
-    
+    config_name = config_name or os.getenv("FLASK_ENV", "development")
     app = Flask(__name__)
-    
-    # Carregar configurações
-    app.config.from_object(config[config_name])
-    
-    # Inicializar extensões
+    app.config.from_object(config.get(config_name, config["default"]))
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app, origins=app.config['CORS_ORIGINS'])
-    
-    # Registrar blueprints
+    CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(catalog_bp)
     app.register_blueprint(price_bp)
-    
-    # Health check
-    @app.route('/health', methods=['GET'])
+
+    @app.get("/health")
     def health():
-        return {'status': 'ok'}, 200
-    
-    # Create tables
+        return jsonify({"status": "ok", "service": "price-tracker"}), 200
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({"error": "Recurso não encontrado"}), 404
+
+    @app.errorhandler(IntegrityError)
+    def integrity_error(error):
+        db.session.rollback()
+        return jsonify({"error": "Registro duplicado ou relacionado a dados existentes"}), 409
+
+    @app.errorhandler(Exception)
+    def internal_error(error):
+        db.session.rollback()
+        if app.config.get("TESTING"):
+            raise error
+        return jsonify({"error": "Erro interno do servidor"}), 500
+
     with app.app_context():
+        from app import models  # noqa: F401
         db.create_all()
-        print("✓ Banco de dados inicializado")
-    
     return app
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+
+if __name__ == "__main__":
+    application = create_app()
+    application.run(host="0.0.0.0", port=int(os.getenv("API_PORT", "5000")), debug=application.config["DEBUG"])

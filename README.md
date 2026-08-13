@@ -1,123 +1,62 @@
-<<<<<<< HEAD
-commit 1
-so para ter commiti aqui
-=======
-# Sistema de Monitoramento de Alterações de Preço
+# Sistema de Precificação
 
-Sistema web simples para monitorar e gerenciar alterações de preços de produtos.
+Sistema web para cadastro de lojas e produtos e gerenciamento do ciclo de vida de alterações de preço. A implementação preserva a arquitetura existente com **Flask**, **SQLAlchemy**, **SQLite**, **JWT**, **CORS** e frontend em **HTML, CSS e JavaScript vanilla**.
 
-## Tecnologias
+## Requisitos
 
-- **Backend**: Python 3.9+ + Flask
-- **Frontend**: HTML5 + CSS3 + JavaScript ES6 (vanilla, sem frameworks)
-- **Banco de Dados**: SQLite
-- **Requirements**: requirements.txt com 10 dependências mínimas
+É necessário ter Python 3.9 ou superior. O frontend pode ser servido por qualquer servidor HTTP estático; o comando `python -m http.server` é suficiente para desenvolvimento.
 
-## Estrutura do Projeto
+## Backend
 
-````
-sistema-precificador/
-├── backend/                    # API Python Flask
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py            # Aplicação principal
-│   │   ├── config.py          # Configurações
-│   │   ├── models/            # Modelos de banco de dados
-│   │   │   ├── __init__.py
-│   │   │   ├── price_change.py
-│   │   │   └── store.py
-│   │   ├── routes/            # Rotas da API
-│   │   │   ├── __init__.py
-│   │   │   ├── price_changes.py
-│   │   │   └── auth.py
-│   │   ├── services/          # Lógica de negócio
-│   │   │   ├── __init__.py
-│   │   │   ├── price_service.py
-│   │   │   └── notification_service.py
-│   │   ├── utils/             # Utilitários
-│   │   │   ├── __init__.py
-│   │   │   └── decorators.py
-│   │   ├── tests/                 # Testes
-│   ├── requirements.txt       # Dependências
-│   ├── .env.example          # Variáveis de ambiente
-│   ├── init_db.py            # Inicializa banco de dados
-│   └── seed.py               # Popula dados de amostra
-│
-├── frontend/                   # Interface web
-│   ├── index.html            # Single Page Application
-│   ├── css/
-│   │   ├── style.css         # Estilos globais (layout, responsivo)
-│   │   └── components.css    # Componentes reutilizáveis
-│   ├── js/
-│   │   ├── app.js            # Router e inicialização
-│   │   ├── api.js            # Cliente HTTP com JWT
-│   │   ├── store.js          # Gerenciamento de estado
-│   │   ├── pages/            # Componentes de página
-│   │   │   ├── dashboard.js
-│   │   │   ├── price-changes.js
-│   │   │   ├── products.js
-│   │   │   └── stores.js
-│   │   └── components/       # Componentes reutilizáveis
-│   │       ├── modal.js
-│   │       └── form.js
-│   └── assets/               # Imagens e ícones
-│
-├── .github/                   # GitHub Actions (opcional)
-├── .gitignore
-├── README.md
-├── ROADMAP.md                # Plano de desenvolvimento (6 fases)
-└── docs/                     # Documentação
-    └── ARCHITECTURE.md
-
-## Início Rápido
-
-### Requisitos
-- Python 3.9+ (com pip)
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
-
-### Setup Local
-
-#### Backend
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-python app/main.py
-````
+python seed.py
+python main.py
+```
 
-#### Frontend
+A API estará disponível em `http://localhost:5000`. O banco SQLite é criado automaticamente. Para configurar outro banco ou segredo, copie `.env.example` para `.env` e ajuste `DATABASE_URL`, `SECRET_KEY`, `JWT_SECRET_KEY`, `CORS_ORIGINS` e `API_PORT`.
 
-Basta abrir `frontend/index.html` no navegador ou servir com:
+## Frontend
 
-````bash
-cd frontend
-Servir em outro terminal com:
+Com o backend em execução, abra outro terminal:
 
 ```bash
 cd frontend
-python -m http.server 8080
-````
-
-Acesse `http://localhost:8080` no navegador.
-
-## Variáveis de Ambiente
-
-Copie `backend/.env.example` para `backend/.env` ou use as configurações padrão:
-
-```env
-FLASK_ENV=development
-DATABASE_URL=sqlite:///price_tracker.db
-SECRET_KEY=dev-secret-key
-JWT_SECRET=jwt-secret-key
-API_PORT=5000
-DEBUG=True
+python3 -m http.server 8080
 ```
 
-## Credenciais Padrão
+Acesse `http://localhost:8080`. Caso a API esteja em outra URL, defina `window.API_BASE_URL` antes dos scripts do frontend ou altere a configuração padrão em `frontend/js/api.js`.
 
-Para login no sistema (dados de amostra):
+## Credenciais de desenvolvimento
 
-- Email: `admin@pricetracker.com`
-- Senha: `admin123
->>>>>>> ee44c56 (sprint 1)
+A carga de demonstração usa `admin@pricetracker.com` com senha `admin123`. Essas credenciais são somente para desenvolvimento e não devem ser utilizadas em produção.
+
+## API principal
+
+| Método | Endpoint | Finalidade |
+|---|---|---|
+| GET | `/health` | Verificar disponibilidade |
+| POST | `/api/auth/login` | Obter JWT |
+| GET | `/api/auth/me` | Consultar sessão atual |
+| POST | `/api/auth/logout` | Encerrar sessão do cliente |
+| GET/POST/PUT/DELETE | `/api/stores` | CRUD de lojas |
+| GET/POST/PUT/DELETE | `/api/products` | CRUD de produtos |
+| GET/POST/PUT/DELETE | `/api/price-changes` | CRUD de alterações |
+| POST | `/api/price-changes/<id>/activate` | `pending` para `active` |
+| POST | `/api/price-changes/<id>/execute` | `active` para `executed` e atualiza o produto |
+| GET | `/api/dashboard` | Métricas e alterações recentes |
+
+Todas as rotas, exceto `/health` e `/api/auth/login`, exigem `Authorization: Bearer <token>`. Alterações executadas não podem ser editadas ou canceladas. Alterações pendentes ou ativas podem ser canceladas.
+
+## Testes
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest -q
+```
+
+Os testes cobrem health check, login válido e inválido, proteção JWT, CRUD de produtos e lojas, filtros, métricas e o fluxo `pending → active → executed`, incluindo a atualização do preço do produto.

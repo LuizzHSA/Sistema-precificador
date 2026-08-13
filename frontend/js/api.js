@@ -1,123 +1,46 @@
-// Cliente HTTP para comunicação com API
 class APIClient {
-  constructor(baseURL = '/api') {
-    this.baseURL = baseURL;
+  constructor() {
+    this.baseURL = window.API_BASE_URL || localStorage.getItem('apiBaseURL') || 'http://localhost:5000/api';
     this.token = localStorage.getItem('token');
   }
-
-  setToken(token) {
-    this.token = token;
-    localStorage.setItem('token', token);
-  }
-
-  getToken() {
-    return this.token;
-  }
-
-  removeToken() {
-    this.token = null;
-    localStorage.removeItem('token');
-  }
-
-  async request(method, endpoint, data = null, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+  setToken(token) { this.token = token; localStorage.setItem('token', token); }
+  getToken() { return this.token; }
+  removeToken() { this.token = null; localStorage.removeItem('token'); }
+  async request(method, endpoint, data = null) {
+    const headers = { Accept: 'application/json' };
+    if (data !== null) headers['Content-Type'] = 'application/json';
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const response = await fetch(`${this.baseURL}${endpoint}`, { method, headers, body: data === null ? undefined : JSON.stringify(data) });
+    const text = await response.text();
+    const json = text ? JSON.parse(text) : {};
+    if (!response.ok) {
+      if (response.status === 401) { this.removeToken(); window.location.hash = '#/login'; }
+      throw { status: response.status, message: json.error || 'Erro na requisição', data: json };
     }
-
-    const config = {
-      method,
-      headers,
-      ...options,
-    };
-
-    if (data) {
-      config.body = JSON.stringify(data);
-    }
-
-    try {
-      const response = await fetch(url, config);
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw {
-          status: response.status,
-          message: json.error || 'Erro na requisição',
-          data: json,
-        };
-      }
-
-      return json;
-    } catch (error) {
-      if (error.status === 401) {
-        // Token expirado ou inválido
-        this.removeToken();
-        window.location.hash = '#/login';
-      }
-      throw error;
-    }
+    return json;
   }
-
-  // Métodos de conveniência
-  get(endpoint, options) {
-    return this.request('GET', endpoint, null, options);
-  }
-
-  post(endpoint, data, options) {
-    return this.request('POST', endpoint, data, options);
-  }
-
-  put(endpoint, data, options) {
-    return this.request('PUT', endpoint, data, options);
-  }
-
-  delete(endpoint, options) {
-    return this.request('DELETE', endpoint, null, options);
-  }
-
-  // Métodos da API
-  async login(email, password) {
-    return this.post('/auth/login', { email, password });
-  }
-
-  async getMe() {
-    return this.get('/auth/me');
-  }
-
-  async logout() {
-    return this.post('/auth/logout', {});
-  }
-
-  async getPriceChanges(filters = {}) {
-    const params = new URLSearchParams(filters);
-    return this.get(`/price-changes?${params}`);
-  }
-
-  async getPriceChange(id) {
-    return this.get(`/price-changes/${id}`);
-  }
-
-  async createPriceChange(data) {
-    return this.post('/price-changes', data);
-  }
-
-  async updatePriceChange(id, data) {
-    return this.put(`/price-changes/${id}`, data);
-  }
-
-  async executePriceChange(id) {
-    return this.post(`/price-changes/${id}/execute`, {});
-  }
-
-  async deletePriceChange(id) {
-    return this.delete(`/price-changes/${id}`);
-  }
+  get(endpoint) { return this.request('GET', endpoint); }
+  post(endpoint, data = {}) { return this.request('POST', endpoint, data); }
+  put(endpoint, data = {}) { return this.request('PUT', endpoint, data); }
+  delete(endpoint) { return this.request('DELETE', endpoint); }
+  login(email, password) { return this.post('/auth/login', { email, password }); }
+  getMe() { return this.get('/auth/me'); }
+  logout() { return this.post('/auth/logout'); }
+  getDashboard() { return this.get('/dashboard'); }
+  getStores(search = '') { return this.get(`/stores${search ? `?search=${encodeURIComponent(search)}` : ''}`); }
+  createStore(data) { return this.post('/stores', data); }
+  updateStore(id, data) { return this.put(`/stores/${id}`, data); }
+  deleteStore(id) { return this.delete(`/stores/${id}`); }
+  getProducts(filters = {}) { const query = new URLSearchParams(filters); return this.get(`/products${query.toString() ? `?${query}` : ''}`); }
+  createProduct(data) { return this.post('/products', data); }
+  updateProduct(id, data) { return this.put(`/products/${id}`, data); }
+  deleteProduct(id) { return this.delete(`/products/${id}`); }
+  getPriceChanges(filters = {}) { const query = new URLSearchParams(filters); return this.get(`/price-changes${query.toString() ? `?${query}` : ''}`); }
+  getPriceChange(id) { return this.get(`/price-changes/${id}`); }
+  createPriceChange(data) { return this.post('/price-changes', data); }
+  updatePriceChange(id, data) { return this.put(`/price-changes/${id}`, data); }
+  activatePriceChange(id) { return this.post(`/price-changes/${id}/activate`); }
+  executePriceChange(id) { return this.post(`/price-changes/${id}/execute`); }
+  deletePriceChange(id) { return this.delete(`/price-changes/${id}`); }
 }
-
-// Instância global
 const api = new APIClient();
