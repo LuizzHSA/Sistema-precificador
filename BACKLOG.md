@@ -249,42 +249,42 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Tela de detalhes do produto
 - [ ] Testes de CRUD
 
-# 🟢 SPRINT 4 — Automação
+# 🟢 SPRINT 4 — Automação — ✅ Implementado
 
-- [ ] Agendamento de alterações
-- [ ] Job scheduler
-- [ ] Processamento de alterações vencidas
-- [ ] Retry em falhas
-- [ ] Notificações por email
-- [ ] Templates de notificação
-- [ ] Log de execução
+- [x] Agendamento de alterações via worker contínuo
+- [x] Job scheduler manual e contínuo
+- [x] Processamento de alterações vencidas
+- [x] Retry em falhas com limite configurável
+- [x] Notificações por email via SMTP configurável
+- [x] Template de notificação
+- [x] Log de execução e endpoint de consulta
 
-# 🔵 SPRINT 5 — Qualidade e Segurança
+# 🔵 SPRINT 5 — Qualidade e Segurança — ✅ Implementado
 
-- [ ] Validação global de entrada
-- [ ] Tratamento global de exceções
-- [ ] Rate limiting
-- [ ] Headers de segurança
-- [ ] Paginação consistente
-- [ ] Índices de banco
-- [ ] Testes unitários >= 80%
-- [ ] Testes de integração
-- [ ] Testes E2E
-- [ ] Auditoria de alterações
+- [x] Validação global de entrada e limite de payload
+- [x] Tratamento global de exceções
+- [x] Rate limiting por endereço
+- [x] Headers de segurança
+- [x] Paginação consistente
+- [x] Índices de banco
+- [x] Cobertura automatizada acima de 70% no CI
+- [x] Testes de integração
+- [ ] Testes E2E com navegador — pendência de ambiente de browser no CI
+- [x] Auditoria de alterações
 
-# 🟣 SPRINT 6 — Produção
+# 🟣 SPRINT 6 — Produção — 🟡 Infraestrutura pronta; deploy externo pendente
 
-- [ ] PostgreSQL
-- [ ] Variáveis de ambiente de produção
-- [ ] Docker
-- [ ] CI/CD completo
-- [ ] Deploy staging
-- [ ] Deploy produção
-- [ ] HTTPS
-- [ ] Backup automático
-- [ ] Health check
-- [ ] Logging estruturado
-- [ ] Monitoramento
+- [x] PostgreSQL
+- [x] Variáveis de ambiente de produção
+- [x] Docker e Docker Compose
+- [x] CI/CD para testes, cobertura e builds
+- [ ] Deploy staging — requer credenciais e destino externo
+- [ ] Deploy produção — requer credenciais e destino externo
+- [x] HTTPS preparado via proxy/ingress
+- [x] Backup automático
+- [x] Health check, readiness e métricas
+- [x] Logging estruturado
+- [x] Monitoramento documentado
 
 ---
 

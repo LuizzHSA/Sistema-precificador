@@ -60,3 +60,30 @@ pytest -q
 ```
 
 Os testes cobrem health check, login válido e inválido, proteção JWT, CRUD de produtos e lojas, filtros, métricas e o fluxo `pending → active → executed`, incluindo a atualização do preço do produto.
+
+## Automação, segurança e produção
+
+O worker executa automaticamente alterações `active` cuja data efetiva venceu. Para executar uma rodada manualmente:
+
+```bash
+cd backend
+python worker.py --max-retries 3
+```
+
+Para execução contínua, use `python worker.py --loop --interval 60`. O processamento registra logs em `execution_logs`, auditoria em `audit_events` e retry controlado por `MAX_RETRIES`. Notificações por email são opcionais e utilizam SMTP configurado por ambiente; sem SMTP, o comportamento é dry-run no log.
+
+A aplicação oferece `GET /health`, `GET /health/ready` e `GET /metrics`. Também aplica limite de payload, rate limiting por endereço, headers de segurança, respostas JSON padronizadas e bloqueio de segredos padrão no modo produção.
+
+## Docker e CI/CD
+
+A execução completa pode ser feita com Docker Compose:
+
+```bash
+export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export JWT_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+docker compose up -d --build
+```
+
+O Compose inicializa PostgreSQL, Redis, API, frontend Nginx e worker. O workflow `.github/workflows/ci.yml` executa testes com cobertura mínima de 70%, compilação Python, sintaxe JavaScript, validação do Compose e builds das imagens. O deploy real exige secrets e um destino de staging/produção configurado pelo responsável pela infraestrutura.
+
+Backups podem ser feitos com `scripts/backup.sh`, que suporta SQLite e PostgreSQL e aplica retenção configurável por `RETENTION_DAYS`. Consulte [`docs/OPERATIONS.md`](docs/OPERATIONS.md) e [`docs/API.md`](docs/API.md) para operação, monitoramento, rollback e endpoints.
