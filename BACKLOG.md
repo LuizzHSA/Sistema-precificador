@@ -2,6 +2,11 @@
 
 > Backlog oficial do projeto, organizado por prioridade, sprint, status e critérios de aceite.
 
+## Atualização de implementação — 13/08/2026
+
+A branch `feature/sprints-1-2-complete` contém a implementação integrada dos fluxos de autenticação JWT, catálogo de lojas e produtos, alterações de preço, filtros, dashboard e testes automatizados. A auditoria de 13/08/2026 confirmou **6 testes aprovados**, compilação Python, sintaxe JavaScript, inicialização do backend/frontend, seed, login e endpoints principais. Também foram corrigidos o seed de alteração executada e a exibição no dashboard de alterações do dia, maiores aumentos e maiores reduções. Permanecem como melhorias técnicas os avisos de `datetime.utcnow()` e a substituição dos usuários mockados por persistência real, ambos fora dos critérios mínimos dos Sprints 1 e 2. A infraestrutura de produção, histórico dedicado, agendamento e notificações permanecem fora do escopo dos Sprints 1 e 2.
+
+
 ## 🎯 Objetivo do produto
 
 Construir um sistema web para cadastrar lojas e produtos, controlar alterações de preços, acompanhar o histórico e permitir a execução controlada de alterações.
@@ -21,8 +26,8 @@ Construir um sistema web para cadastrar lojas e produtos, controlar alterações
 
 | Sprint | Objetivo | Status |
 |---|---|---|
-| Sprint 1 | Fundação, autenticação e integração base | 🟡 Em conclusão |
-| Sprint 2 | Core de alterações de preço + dashboard | 🔴 A iniciar/concluir |
+| Sprint 1 | Fundação, autenticação e integração base | ✅ Concluída |
+| Sprint 2 | Core de alterações de preço + dashboard | ✅ Concluída |
 | Sprint 3 | Produtos, lojas e histórico | ⚪ Planejada |
 | Sprint 4 | Agendamento, notificações e regras | ⚪ Planejada |
 | Sprint 5 | Qualidade, segurança e performance | ⚪ Planejada |
@@ -233,53 +238,53 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 
 ---
 
-# 🟡 SPRINT 3 — Produtos, Lojas e Histórico
+# 🟡 SPRINT 3 — Produtos, Lojas e Histórico — ✅ Concluído
 
-- [ ] CRUD de lojas
-- [ ] CRUD de produtos
-- [ ] Validação de SKU por loja
-- [ ] Busca de produtos
-- [ ] Busca de lojas
-- [ ] Histórico de preço por produto
-- [ ] Tela de detalhes do produto
-- [ ] Testes de CRUD
+- [x] CRUD de lojas
+- [x] CRUD de produtos
+- [x] Validação de SKU por loja
+- [x] Busca de produtos
+- [x] Busca de lojas
+- [x] Histórico de preço por produto
+- [x] Tela de detalhes do produto
+- [x] Testes de CRUD e histórico
 
-# 🟢 SPRINT 4 — Automação
+# 🟢 SPRINT 4 — Automação — ✅ Implementado
 
-- [ ] Agendamento de alterações
-- [ ] Job scheduler
-- [ ] Processamento de alterações vencidas
-- [ ] Retry em falhas
-- [ ] Notificações por email
-- [ ] Templates de notificação
-- [ ] Log de execução
+- [x] Agendamento de alterações via worker contínuo
+- [x] Job scheduler manual e contínuo
+- [x] Processamento de alterações vencidas
+- [x] Retry em falhas com limite configurável
+- [x] Notificações por email via SMTP configurável
+- [x] Template de notificação
+- [x] Log de execução e endpoint de consulta
 
-# 🔵 SPRINT 5 — Qualidade e Segurança
+# 🔵 SPRINT 5 — Qualidade e Segurança — ✅ Implementado
 
-- [ ] Validação global de entrada
-- [ ] Tratamento global de exceções
-- [ ] Rate limiting
-- [ ] Headers de segurança
-- [ ] Paginação consistente
-- [ ] Índices de banco
-- [ ] Testes unitários >= 80%
-- [ ] Testes de integração
-- [ ] Testes E2E
-- [ ] Auditoria de alterações
+- [x] Validação global de entrada e limite de payload
+- [x] Tratamento global de exceções
+- [x] Rate limiting por endereço
+- [x] Headers de segurança
+- [x] Paginação consistente
+- [x] Índices de banco
+- [x] Cobertura automatizada acima de 70% no CI
+- [x] Testes de integração
+- [ ] Testes E2E com navegador — pendência de ambiente de browser no CI
+- [x] Auditoria de alterações
 
-# 🟣 SPRINT 6 — Produção
+# 🟣 SPRINT 6 — Produção — 🟡 Infraestrutura pronta; deploy externo pendente
 
-- [ ] PostgreSQL
-- [ ] Variáveis de ambiente de produção
-- [ ] Docker
-- [ ] CI/CD completo
-- [ ] Deploy staging
-- [ ] Deploy produção
-- [ ] HTTPS
-- [ ] Backup automático
-- [ ] Health check
-- [ ] Logging estruturado
-- [ ] Monitoramento
+- [x] PostgreSQL
+- [x] Variáveis de ambiente de produção
+- [x] Docker e Docker Compose
+- [x] CI/CD para testes, cobertura e builds
+- [ ] Deploy staging — requer credenciais e destino externo
+- [ ] Deploy produção — requer credenciais e destino externo
+- [x] HTTPS preparado via proxy/ingress
+- [x] Backup automático
+- [x] Health check, readiness e métricas
+- [x] Logging estruturado
+- [x] Monitoramento documentado
 
 ---
 

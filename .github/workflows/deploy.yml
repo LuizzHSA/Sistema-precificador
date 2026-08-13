@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente de destino"
+        required: true
+        type: choice
+        options: [staging, production]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Deploy by commit SHA
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+        run: |
+          test -n "$DEPLOY_HOST" -a -n "$DEPLOY_USER" -a -n "$DEPLOY_PATH"
+          ssh -o StrictHostKeyChecking=no "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git fetch origin && git checkout '${GITHUB_SHA}' && printf 'SECRET_KEY=%s\nJWT_SECRET_KEY=%s\n' '$SECRET_KEY' '$JWT_SECRET_KEY' > .env.deploy && docker compose --env-file .env.deploy up -d --build"
+      - name: Verify health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          test -n "$HEALTHCHECK_URL"
+          curl --fail --retry 10 --retry-delay 5 "$HEALTHCHECK_URL/health/ready"
