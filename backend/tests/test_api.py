@@ -123,3 +123,16 @@ def test_operational_endpoints_and_security_headers(client):
     assert metrics.status_code == 200
     assert "stores_total" in metrics.json
     assert client.get("/health").headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_product_history_details_and_sku_uniqueness(client):
+    headers, store, product = catalog(client)
+    payload = {"store_id": store["id"], "product_id": product["id"], "new_price": 140, "effective_date": datetime.utcnow().isoformat(), "reason": "Histórico"}
+    assert client.post("/api/price-changes", headers=headers, json=payload).status_code == 201
+    history = client.get(f"/api/products/{product['id']}/history", headers=headers)
+    assert history.status_code == 200
+    assert history.json["product"]["id"] == product["id"]
+    assert history.json["total"] == 1
+    duplicate = client.post("/api/products", headers=headers, json={"store_id": store["id"], "name": "Duplicado", "sku": "SKU-1", "current_price": 20})
+    assert duplicate.status_code == 409
+    assert client.get("/api/products/missing/history", headers=headers).status_code == 404

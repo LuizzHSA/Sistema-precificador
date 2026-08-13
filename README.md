@@ -44,6 +44,7 @@ A carga de demonstração usa `admin@pricetracker.com` com senha `admin123`. Ess
 | POST | `/api/auth/logout` | Encerrar sessão do cliente |
 | GET/POST/PUT/DELETE | `/api/stores` | CRUD de lojas |
 | GET/POST/PUT/DELETE | `/api/products` | CRUD de produtos |
+| GET | `/api/products/<id>/history` | Detalhes e histórico de alterações do produto |
 | GET/POST/PUT/DELETE | `/api/price-changes` | CRUD de alterações |
 | POST | `/api/price-changes/<id>/activate` | `pending` para `active` |
 | POST | `/api/price-changes/<id>/execute` | `active` para `executed` e atualiza o produto |

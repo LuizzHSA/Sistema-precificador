@@ -36,6 +36,7 @@ class APIClient {
   createProduct(data) { return this.post('/products', data); }
   updateProduct(id, data) { return this.put(`/products/${id}`, data); }
   deleteProduct(id) { return this.delete(`/products/${id}`); }
+  getProductHistory(id, filters = {}) { const query = new URLSearchParams(filters); return this.get(`/products/${id}/history${query.toString() ? `?${query}` : ''}`); }
   getPriceChanges(filters = {}) { const query = new URLSearchParams(filters); return this.get(`/price-changes${query.toString() ? `?${query}` : ''}`); }
   getPriceChange(id) { return this.get(`/price-changes/${id}`); }
   createPriceChange(data) { return this.post('/price-changes', data); }

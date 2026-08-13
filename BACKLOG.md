@@ -238,16 +238,16 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 
 ---
 
-# 🟡 SPRINT 3 — Produtos, Lojas e Histórico
+# 🟡 SPRINT 3 — Produtos, Lojas e Histórico — ✅ Concluído
 
-- [ ] CRUD de lojas
-- [ ] CRUD de produtos
-- [ ] Validação de SKU por loja
-- [ ] Busca de produtos
-- [ ] Busca de lojas
-- [ ] Histórico de preço por produto
-- [ ] Tela de detalhes do produto
-- [ ] Testes de CRUD
+- [x] CRUD de lojas
+- [x] CRUD de produtos
+- [x] Validação de SKU por loja
+- [x] Busca de produtos
+- [x] Busca de lojas
+- [x] Histórico de preço por produto
+- [x] Tela de detalhes do produto
+- [x] Testes de CRUD e histórico
 
 # 🟢 SPRINT 4 — Automação — ✅ Implementado
 

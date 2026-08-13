@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import or_
 from app import db
-from app.models import Store, Product
+from app.models import Store, Product, PriceChange
 
 catalog_bp = Blueprint("catalog", __name__, url_prefix="/api")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -122,6 +122,19 @@ def create_product():
 def get_product(product_id):
     product = db.session.get(Product, product_id)
     return jsonify(product.to_dict()) if product else (jsonify({"error": "Produto não encontrado"}), 404)
+
+
+@catalog_bp.get("/products/<product_id>/history")
+@jwt_required()
+def product_history(product_id):
+    product = db.session.get(Product, product_id)
+    if not product:
+        return jsonify({"error": "Produto não encontrado"}), 404
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = min(max(request.args.get("per_page", 20, type=int), 1), 100)
+    pagination = PriceChange.query.filter_by(product_id=product_id).order_by(PriceChange.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify({"product": product.to_dict(), "data": [item.to_dict() for item in pagination.items],
+                    "total": pagination.total, "pages": pagination.pages, "page": page, "per_page": per_page})
 
 
 @catalog_bp.put("/products/<product_id>")

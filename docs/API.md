@@ -7,6 +7,7 @@ A API usa JSON e autenticação `Bearer JWT` em todas as rotas privadas.
 | GET | `/health` | Liveness sem autenticação |
 | GET | `/health/ready` | Readiness e teste de banco |
 | GET | `/metrics` | Contadores operacionais |
+| GET | `/api/products/<id>/history` | Detalhes do produto e histórico de alterações |
 | POST | `/api/automation/run` | Processa alterações vencidas |
 | GET | `/api/execution-logs` | Últimas execuções do worker |
 | GET | `/api/audit-events` | Eventos de auditoria recentes |
