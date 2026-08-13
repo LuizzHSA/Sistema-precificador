@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos globais personalizados */
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+button {
+  @apply transition-colors duration-200;
+}
+
+input,
+textarea,
+select {
+  @apply rounded-md border-gray-300;
+}
