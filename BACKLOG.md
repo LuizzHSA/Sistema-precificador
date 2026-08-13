@@ -4,7 +4,7 @@
 
 ## Atualização de implementação — 13/08/2026
 
-A branch `feature/sprints-1-2-complete` contém a implementação integrada dos fluxos de autenticação JWT, catálogo de lojas e produtos, alterações de preço, filtros, dashboard e testes automatizados. A validação atual executou **4 testes, todos aprovados**. A infraestrutura de produção, histórico dedicado, agendamento e notificações permanecem fora do escopo dos Sprints 1 e 2.
+A branch `feature/sprints-1-2-complete` contém a implementação integrada dos fluxos de autenticação JWT, catálogo de lojas e produtos, alterações de preço, filtros, dashboard e testes automatizados. A auditoria de 13/08/2026 confirmou **6 testes aprovados**, compilação Python, sintaxe JavaScript, inicialização do backend/frontend, seed, login e endpoints principais. Também foram corrigidos o seed de alteração executada e a exibição no dashboard de alterações do dia, maiores aumentos e maiores reduções. Permanecem como melhorias técnicas os avisos de `datetime.utcnow()` e a substituição dos usuários mockados por persistência real, ambos fora dos critérios mínimos dos Sprints 1 e 2. A infraestrutura de produção, histórico dedicado, agendamento e notificações permanecem fora do escopo dos Sprints 1 e 2.
 
 
 ## 🎯 Objetivo do produto

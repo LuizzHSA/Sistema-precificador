@@ -64,6 +64,9 @@ def test_price_change_lifecycle_and_metrics(client):
     assert client.delete(f"/api/price-changes/{change_id}", headers=headers).status_code == 400
     dashboard = client.get("/api/dashboard", headers=headers).json
     assert dashboard["executed"] == 1
+    assert "today_changes" in dashboard
+    assert "largest_increases" in dashboard
+    assert "largest_reductions" in dashboard
 
 
 def test_price_change_filters_and_cancel(client):
@@ -71,6 +74,30 @@ def test_price_change_filters_and_cancel(client):
     payload = {"store_id": store["id"], "product_id": product["id"], "new_price": 90, "effective_date": datetime.utcnow().isoformat()}
     change_id = client.post("/api/price-changes", headers=headers, json=payload).json["data"]["id"]
     assert client.get("/api/price-changes?status=pending", headers=headers).json["total"] == 1
+    assert client.get(f"/api/price-changes?store_id={store['id']}&product_id={product['id']}", headers=headers).json["total"] == 1
     assert client.put(f"/api/price-changes/{change_id}", headers=headers, json={"reason": "ajuste"}).status_code == 200
     assert client.delete(f"/api/price-changes/{change_id}", headers=headers).status_code == 200
     assert client.get("/api/price-changes?status=cancelled", headers=headers).json["total"] == 1
+
+
+def test_full_catalog_delete_and_error_contract(client):
+    headers, store, product = catalog(client)
+    assert client.get(f"/api/stores/{store['id']}", headers=headers).status_code == 200
+    assert client.get(f"/api/products/{product['id']}", headers=headers).status_code == 200
+    assert client.get("/api/stores/missing", headers=headers).status_code == 404
+    assert client.get("/api/products/missing", headers=headers).status_code == 404
+    assert client.delete(f"/api/products/{product['id']}", headers=headers).status_code == 200
+    assert client.delete(f"/api/stores/{store['id']}", headers=headers).status_code == 200
+
+
+def test_active_cancel_and_pagination(client):
+    headers, store, product = catalog(client)
+    payload = {"store_id": store["id"], "product_id": product["id"], "new_price": 130, "effective_date": datetime.utcnow().isoformat()}
+    change_id = client.post("/api/price-changes", headers=headers, json=payload).json["data"]["id"]
+    assert client.post(f"/api/price-changes/{change_id}/activate", headers=headers).status_code == 200
+    assert client.delete(f"/api/price-changes/{change_id}", headers=headers).status_code == 200
+    assert client.delete(f"/api/price-changes/{change_id}", headers=headers).status_code == 400
+    response = client.get("/api/price-changes?page=1&per_page=1", headers=headers)
+    assert response.status_code == 200
+    assert response.json["page"] == 1
+    assert response.json["per_page"] == 1

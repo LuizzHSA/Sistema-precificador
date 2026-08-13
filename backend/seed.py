@@ -69,7 +69,7 @@ def seed_db():
             store_id=store2.id,
             name="Teclado Mecânico",
             sku="KEY-003",
-            current_price=450.00
+            current_price=399.90
         )
         
         db.session.add_all([product1, product2, product3])
