@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from .automation import ExecutionLog, AuditEvent
 
 
 class Store(db.Model):
@@ -53,8 +54,10 @@ class PriceChange(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     executed_at = db.Column(db.DateTime)
+    retry_count = db.Column(db.Integer, nullable=False, default=0)
     store = db.relationship("Store", back_populates="price_changes")
     product = db.relationship("Product", back_populates="price_changes")
+    execution_logs = db.relationship("ExecutionLog", back_populates="price_change", cascade="all, delete-orphan")
 
     @property
     def price_difference(self):
@@ -73,4 +76,5 @@ class PriceChange(db.Model):
                 "percentage_change": self.percentage_change, "effective_date": self.effective_date.isoformat() if self.effective_date else None,
                 "status": self.status, "reason": self.reason, "created_at": self.created_at.isoformat() if self.created_at else None,
                 "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-                "executed_at": self.executed_at.isoformat() if self.executed_at else None}
+                "executed_at": self.executed_at.isoformat() if self.executed_at else None,
+                "retry_count": self.retry_count}

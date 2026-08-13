@@ -101,3 +101,25 @@ def test_active_cancel_and_pagination(client):
     assert response.status_code == 200
     assert response.json["page"] == 1
     assert response.json["per_page"] == 1
+
+
+def test_automation_executes_due_active_change_and_audits(client):
+    headers, store, product = catalog(client)
+    payload = {"store_id": store["id"], "product_id": product["id"], "new_price": 80, "effective_date": (datetime.utcnow() - timedelta(minutes=1)).isoformat()}
+    change = client.post("/api/price-changes", headers=headers, json=payload).json["data"]
+    assert client.post(f"/api/price-changes/{change['id']}/activate", headers=headers).status_code == 200
+    result = client.post("/api/automation/run", headers=headers)
+    assert result.status_code == 200
+    assert result.json["processed"] == 1
+    assert client.get(f"/api/products/{product['id']}", headers=headers).json["current_price"] == 80
+    logs = client.get("/api/execution-logs", headers=headers)
+    assert logs.status_code == 200
+    assert logs.json[0]["status"] == "success"
+
+
+def test_operational_endpoints_and_security_headers(client):
+    assert client.get("/health/ready").status_code == 200
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert "stores_total" in metrics.json
+    assert client.get("/health").headers["X-Content-Type-Options"] == "nosniff"

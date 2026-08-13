@@ -4,7 +4,9 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import or_
 from app import db
-from app.models import PriceChange, Product, Store
+from app.models import PriceChange, Product, Store, ExecutionLog, AuditEvent
+from app.services.automation import process_due_price_changes
+from app.services.audit import record_audit
 
 price_bp = Blueprint("price_changes", __name__, url_prefix="/api")
 
@@ -85,6 +87,7 @@ def create_price_change():
         return jsonify({"error": "Data efetiva inválida"}), 400
     item = PriceChange(id=str(uuid.uuid4()), store_id=store.id, product_id=product.id, current_price=float(product.current_price), new_price=new_price, effective_date=effective_date, reason=data.get("reason", ""), status="pending")
     db.session.add(item)
+    record_audit("price_change.created", "price_change", item.id, {"new_price": new_price, "product_id": product.id})
     db.session.commit()
     return jsonify({"message": "Alteração de preço criada com sucesso", "data": item.to_dict()}), 201
 
@@ -110,6 +113,7 @@ def update_price_change(price_change_id):
         item.effective_date = date
     if "reason" in data:
         item.reason = data["reason"]
+    record_audit("price_change.updated", "price_change", item.id, {"status": item.status})
     db.session.commit()
     return jsonify({"message": "Alteração de preço atualizada com sucesso", "data": item.to_dict()})
 
@@ -123,6 +127,7 @@ def activate_price_change(price_change_id):
     if item.status != "pending":
         return jsonify({"error": "Apenas alterações pendentes podem ser ativadas"}), 400
     item.status = "active"
+    record_audit("price_change.activated", "price_change", item.id)
     db.session.commit()
     return jsonify({"message": "Alteração ativada com sucesso", "data": item.to_dict()})
 
@@ -138,6 +143,7 @@ def execute_price_change(price_change_id):
     item.product.current_price = item.new_price
     item.status = "executed"
     item.executed_at = datetime.utcnow()
+    record_audit("price_change.executed", "price_change", item.id, {"new_price": item.new_price})
     db.session.commit()
     return jsonify({"message": "Alteração de preço executada com sucesso", "data": item.to_dict()})
 
@@ -151,8 +157,33 @@ def cancel_price_change(price_change_id):
     if item.status in {"executed", "cancelled"}:
         return jsonify({"error": "A alteração não pode ser cancelada neste status"}), 400
     item.status = "cancelled"
+    record_audit("price_change.cancelled", "price_change", item.id)
     db.session.commit()
     return jsonify({"message": "Alteração de preço cancelada com sucesso", "data": item.to_dict()})
+
+
+@price_bp.post("/automation/run")
+@jwt_required()
+def run_automation():
+    result = process_due_price_changes()
+    return jsonify(result), 200
+
+
+@price_bp.get("/execution-logs")
+@jwt_required()
+def execution_logs():
+    logs = ExecutionLog.query.order_by(ExecutionLog.created_at.desc()).limit(100).all()
+    return jsonify([{"id": log.id, "price_change_id": log.price_change_id, "status": log.status,
+                    "message": log.message, "created_at": log.created_at.isoformat()} for log in logs])
+
+
+@price_bp.get("/audit-events")
+@jwt_required()
+def audit_events():
+    events = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(100).all()
+    return jsonify([{"id": event.id, "action": event.action, "entity_type": event.entity_type,
+                    "entity_id": event.entity_id, "payload": event.payload,
+                    "created_at": event.created_at.isoformat()} for event in events])
 
 
 @price_bp.get("/dashboard")
