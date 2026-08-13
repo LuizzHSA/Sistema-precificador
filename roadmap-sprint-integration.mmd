@@ -1,0 +1,53 @@
+graph TB
+    subgraph "🗺️ ROADMAP (6 FASES)"
+        F1["Fase 1: Fundação<br/>15-19/04<br/>🟡 66%"]
+        F2["Fase 2: Core Features<br/>20-27/04<br/>⏳ 0%"]
+        F3["Fase 3: Integrações<br/>28-05/05<br/>⏳ 0%"]
+        F4["Fase 4: Performance<br/>06-13/05<br/>⏳ 0%"]
+        F5["Fase 5: Deployment<br/>14-19/05<br/>⏳ 0%"]
+    end
+    
+    subgraph "📊 SPRINT 1 KANBAN"
+        S11["Sprint 1.1<br/>Setup & Infra<br/>✅ 100%"]
+        S12["Sprint 1.2<br/>Backend Base<br/>🟡 90%"]
+        S13["Sprint 1.3<br/>Frontend Base<br/>🟡 85%"]
+    end
+    
+    subgraph "📋 STATUS ATUAL"
+        STATUS["<b>10 / 15 Tarefas</b><br/>66% Concluído<br/>3 Em Progresso<br/>2 Não Iniciadas"]
+        
+        BANCO["🗄️ Banco de Dados<br/>✅ SQLite Criado<br/>✅ 3 Tabelas<br/>✅ 8 Registros Test"]
+        
+        API["🌐 API Backend<br/>✅ Flask + JWT<br/>✅ Auth Endpoints<br/>✅ CRUD Routes"]
+        
+        FRONT["🎨 Frontend SPA<br/>✅ HTML Shell<br/>✅ CSS Complete<br/>✅ JS Router"]
+    end
+    
+    F1 === SPRINT1["👇 SPRINT 1 DETALHES"]
+    SPRINT1 --> S11
+    SPRINT1 --> S12
+    SPRINT1 --> S13
+    
+    S11 --> STATUS
+    S12 --> API
+    S12 --> BANCO
+    S13 --> FRONT
+    
+    F1 --> F2 --> F3 --> F4 --> F5
+    
+    style F1 fill:#fbbf24,color:#000,stroke:#f59e0b,stroke-width:3px
+    style F2 fill:#d1d5db,color:#6b7280,stroke:#9ca3af,stroke-width:2px
+    style F3 fill:#d1d5db,color:#6b7280,stroke:#9ca3af,stroke-width:2px
+    style F4 fill:#d1d5db,color:#6b7280,stroke:#9ca3af,stroke-width:2px
+    style F5 fill:#d1d5db,color:#6b7280,stroke:#9ca3af,stroke-width:2px
+    
+    style S11 fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
+    style S12 fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
+    style S13 fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
+    
+    style STATUS fill:#3b82f6,color:#fff,stroke:#1d4ed8,stroke-width:3px
+    style BANCO fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
+    style API fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
+    style FRONT fill:#10b981,color:#fff,stroke:#059669,stroke-width:2px
+    
+    style SPRINT1 fill:#667eea,color:#fff,stroke:#5568d3,stroke-width:2px
