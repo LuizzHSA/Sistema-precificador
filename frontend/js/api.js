@@ -7,13 +7,15 @@ class APIClient {
   setToken(token) { this.token = token; localStorage.setItem('token', token); }
   getToken() { return this.token; }
   removeToken() { this.token = null; localStorage.removeItem('token'); }
+  setBaseURL(url) { this.baseURL = url.replace(/\/$/, ''); window.API_BASE_URL = this.baseURL; localStorage.setItem('apiBaseURL', this.baseURL); }
   async request(method, endpoint, data = null) {
     const headers = { Accept: 'application/json' };
     if (data !== null) headers['Content-Type'] = 'application/json';
     if (this.token) headers.Authorization = `Bearer ${this.token}`;
     const response = await fetch(`${this.baseURL}${endpoint}`, { method, headers, body: data === null ? undefined : JSON.stringify(data) });
     const text = await response.text();
-    const json = text ? JSON.parse(text) : {};
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text || 'Resposta inválida da API' }; }
     if (!response.ok) {
       if (response.status === 401) { this.removeToken(); window.location.hash = '#/login'; }
       throw { status: response.status, message: json.error || 'Erro na requisição', data: json };
