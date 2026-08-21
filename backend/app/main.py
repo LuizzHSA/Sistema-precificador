@@ -32,7 +32,7 @@ def create_app(config_name=None):
 
     @app.before_request
     def enforce_rate_limit():
-        if request.path == "/health" or request.path == "/health/ready":
+        if request.path in ("/", "/health", "/health/ready"):
             return None
         now = time.monotonic()
         bucket = request_hits[request.remote_addr or "unknown"]
@@ -56,6 +56,18 @@ def create_app(config_name=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(catalog_bp)
     app.register_blueprint(price_bp)
+
+    @app.get("/")
+    def root():
+        return jsonify({
+            "application": "Sistema Precificador",
+            "status": "online",
+            "service": "price-tracker",
+            "api": "/api",
+            "health": "/health",
+            "readiness": "/health/ready",
+            "metrics": "/metrics"
+        }), 200
 
     @app.get("/health")
     def health():
