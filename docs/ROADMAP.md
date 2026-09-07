@@ -113,7 +113,7 @@ Sistema web para monitoramento e gerenciamento de alterações de preços de pro
 
 ### Sprint 4.1: Otimizações
 
-- [ ] Cache de leitura (Redis)
+- [ ] Cache de leitura compatível com a infraestrutura escolhida
 - [ ] Paginação de resultados
 - [ ] Índices de banco de dados
 - [ ] Compressão de respostas HTTP
@@ -158,7 +158,6 @@ Sistema web para monitoramento e gerenciamento de alterações de preços de pro
 
 ### Sprint 5.2: Infraestrutura
 
-- [ ] VPS/Cloud setup
 - [ ] Configurar HTTPS/SSL
 - [ ] Backup automático
 - [ ] Monitor uptime
@@ -299,7 +298,6 @@ Tools:
 
 ```
 Backend:
-  - Redis (cache)
   - APScheduler (cron jobs)
   - SendGrid (email)
   - Twilio (SMS)
@@ -312,7 +310,7 @@ Frontend:
 DevOps:
   - GitHub Actions
   - Linux (deployment)
-  - Nginx (reverse proxy)
+  - Proxy TLS gerenciado (reverse proxy)
 ```
 
 ---

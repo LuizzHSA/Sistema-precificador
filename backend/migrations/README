@@ -1,0 +1,9 @@
+Database migrations for Sistema de Precificacao.
+
+Apply the latest revision with:
+
+    python init_db.py
+
+Or use the Flask CLI from backend:
+
+    flask --app app.main:create_app db upgrade

@@ -6,11 +6,11 @@ from flask import Flask, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.config import config
-from app import db, jwt
+from app import db, jwt, migrate
 from app.routes.auth import auth_bp
 from app.routes.price_changes import price_bp
 from app.routes.catalog import catalog_bp
@@ -22,12 +22,18 @@ def create_app(config_name=None):
     config_name = config_name or os.getenv("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config["default"]))
-    if config_name == "production" and (app.config["SECRET_KEY"].startswith("dev-") or app.config["JWT_SECRET_KEY"].startswith("jwt-secret")):
-        raise RuntimeError("Segredos de produção devem ser definidos por variáveis de ambiente")
+    if config_name == "production" and (
+        app.config["SECRET_KEY"].startswith("dev-")
+        or app.config["JWT_SECRET_KEY"].startswith("jwt-secret")
+        or not app.config.get("AUTH_EMAIL")
+        or not app.config.get("AUTH_PASSWORD_HASH")
+    ):
+        raise RuntimeError("Segredos e credenciais de produção devem ser definidos por variáveis de ambiente")
     logging.basicConfig(level=getattr(logging, app.config.get("LOG_LEVEL", "INFO").upper(), logging.INFO), format="%(asctime)s %(levelname)s %(name)s %(message)s")
     request_hits = defaultdict(deque)
     db.init_app(app)
     jwt.init_app(app)
+    migrate.init_app(app, db)
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
     @app.before_request
@@ -105,11 +111,6 @@ def create_app(config_name=None):
 
     with app.app_context():
         from app import models  # noqa: F401
-        db.create_all()
-        columns = {column["name"] for column in inspect(db.engine).get_columns("price_changes")}
-        if "retry_count" not in columns:
-            db.session.execute(text("ALTER TABLE price_changes ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0"))
-            db.session.commit()
     return app
 
 

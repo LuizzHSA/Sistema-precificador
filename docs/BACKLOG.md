@@ -6,7 +6,6 @@
 
 A branch `feature/sprints-1-2-complete` contém a implementação integrada dos fluxos de autenticação JWT, catálogo de lojas e produtos, alterações de preço, filtros, dashboard e testes automatizados. A auditoria de 13/08/2026 confirmou **6 testes aprovados**, compilação Python, sintaxe JavaScript, inicialização do backend/frontend, seed, login e endpoints principais. Também foram corrigidos o seed de alteração executada e a exibição no dashboard de alterações do dia, maiores aumentos e maiores reduções. Permanecem como melhorias técnicas os avisos de `datetime.utcnow()` e a substituição dos usuários mockados por persistência real, ambos fora dos critérios mínimos dos Sprints 1 e 2. A infraestrutura de produção, histórico dedicado, agendamento e notificações permanecem fora do escopo dos Sprints 1 e 2.
 
-
 ## 🎯 Objetivo do produto
 
 Construir um sistema web para cadastrar lojas e produtos, controlar alterações de preços, acompanhar o histórico e permitir a execução controlada de alterações.
@@ -24,14 +23,14 @@ Construir um sistema web para cadastrar lojas e produtos, controlar alterações
 
 # 📊 Visão das Sprints
 
-| Sprint | Objetivo | Status |
-|---|---|---|
+| Sprint   | Objetivo                                 | Status       |
+| -------- | ---------------------------------------- | ------------ |
 | Sprint 1 | Fundação, autenticação e integração base | ✅ Concluída |
-| Sprint 2 | Core de alterações de preço + dashboard | ✅ Concluída |
-| Sprint 3 | Produtos, lojas e histórico | ⚪ Planejada |
-| Sprint 4 | Agendamento, notificações e regras | ⚪ Planejada |
-| Sprint 5 | Qualidade, segurança e performance | ⚪ Planejada |
-| Sprint 6 | Deploy, observabilidade e produção | ⚪ Planejada |
+| Sprint 2 | Core de alterações de preço + dashboard  | ✅ Concluída |
+| Sprint 3 | Produtos, lojas e histórico              | ⚪ Planejada |
+| Sprint 4 | Agendamento, notificações e regras       | ⚪ Planejada |
+| Sprint 5 | Qualidade, segurança e performance       | ⚪ Planejada |
+| Sprint 6 | Deploy, observabilidade e produção       | ⚪ Planejada |
 
 ---
 
@@ -42,6 +41,7 @@ Construir um sistema web para cadastrar lojas e produtos, controlar alterações
 Ter o sistema executando localmente, com backend, frontend, banco, autenticação e comunicação funcionando de ponta a ponta.
 
 ### S1-01 — Validar execução do backend
+
 - **Prioridade:** P0
 - **Status:** 🔄
 - [ ] `python main.py` inicia sem erro
@@ -49,6 +49,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] Banco SQLite é criado/inicializado
 
 ### S1-02 — Validar execução do frontend
+
 - **Prioridade:** P0
 - **Status:** 🔄
 - [ ] SPA abre via servidor HTTP local
@@ -56,6 +57,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] Routing hash funciona
 
 ### S1-03 — Corrigir integração frontend → API
+
 - **Prioridade:** P0
 - **Status:** 🔄
 - [ ] URL base da API funciona quando frontend e backend estão em portas diferentes
@@ -64,6 +66,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] Erros HTTP exibidos corretamente
 
 ### S1-04 — Login/logout completo
+
 - **Prioridade:** P0
 - **Status:** 🔄
 - [ ] Login chama `/api/auth/login`
@@ -73,6 +76,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] Token inválido/expirado redireciona para login
 
 ### S1-05 — Testes automatizados da autenticação
+
 - **Prioridade:** P0
 - **Status:** ⏳
 - [ ] Login válido retorna 200 + token
@@ -82,6 +86,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] `/me` retorna usuário autenticado
 
 ### S1-06 — Testes automatizados de Price Changes
+
 - **Prioridade:** P0
 - **Status:** ⏳
 - [ ] GET autenticado
@@ -93,6 +98,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 - [ ] Execução atualiza produto e alteração
 
 ### S1-07 — Documentação de execução
+
 - **Prioridade:** P1
 - **Status:** ⏳
 - [ ] README atualizado
@@ -120,6 +126,7 @@ Ter o sistema executando localmente, com backend, frontend, banco, autenticaçã
 Transformar a base existente em um fluxo funcional de gerenciamento de alterações de preço.
 
 ### S2-01 — Listagem de alterações
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Listar alterações reais da API
@@ -131,6 +138,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Exibir status
 
 ### S2-02 — Filtros
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Filtro por status
@@ -140,6 +148,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Estado vazio amigável
 
 ### S2-03 — Criar alteração de preço
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Modal/formulário de criação
@@ -153,6 +162,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Atualização automática da tabela
 
 ### S2-04 — Visualizar detalhes
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Modal de detalhes
@@ -166,6 +176,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Exibir datas
 
 ### S2-05 — Editar alteração pendente/ativa
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Editar novo preço
@@ -175,6 +186,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Atualizar tabela após salvar
 
 ### S2-06 — Cancelar alteração
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Confirmar cancelamento
@@ -183,6 +195,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Atualizar UI sem reload completo
 
 ### S2-07 — Ativar alteração
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Definir regra clara para `pending → active`
@@ -191,6 +204,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Teste automatizado
 
 ### S2-08 — Executar alteração
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Permitir execução somente quando `active`
@@ -201,6 +215,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Teste de consistência/transação
 
 ### S2-09 — Dashboard funcional
+
 - **Prioridade:** P1
 - **Status:** 🔴
 - [ ] KPI total de alterações
@@ -211,6 +226,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Dados vindos da API, sem valores mockados
 
 ### S2-10 — API de dashboard
+
 - **Prioridade:** P1
 - **Status:** 🔴
 - [ ] Criar endpoint de resumo
@@ -219,6 +235,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 - [ ] Testar endpoint
 
 ### S2-11 — Testes de integração Sprint 2
+
 - **Prioridade:** P0
 - **Status:** 🔴
 - [ ] Fluxo criar → ativar → executar
@@ -251,9 +268,8 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 
 # 🟢 SPRINT 4 — Automação — ✅ Implementado
 
-- [x] Agendamento de alterações via worker contínuo
-- [x] Job scheduler manual e contínuo
-- [x] Processamento de alterações vencidas
+- [x] Processamento manual de alterações agendadas
+- [x] Processamento de alterações vencidas via API
 - [x] Retry em falhas com limite configurável
 - [x] Notificações por email via SMTP configurável
 - [x] Template de notificação
@@ -276,8 +292,7 @@ Transformar a base existente em um fluxo funcional de gerenciamento de alteraç�
 
 - [x] PostgreSQL
 - [x] Variáveis de ambiente de produção
-- [x] Docker e Docker Compose
-- [x] CI/CD para testes, cobertura e builds
+- [x] CI/CD para testes e cobertura
 - [ ] Deploy staging — requer credenciais e destino externo
 - [ ] Deploy produção — requer credenciais e destino externo
 - [x] HTTPS preparado via proxy/ingress

@@ -25,57 +25,30 @@ Se o projeto já estiver clonado, apenas abra o terminal na pasta raiz `Sistema-
 
 ## 2. Backend
 
-### Windows — PowerShell
+## 8. Automação
 
-Abra um terminal e execute:
+A automação processa alterações `active` cuja data efetiva venceu através da API autenticada.
 
-```powershell
+Execute uma rodada manualmente com:
 cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python seed.py
-python main.py
-```
 
+````http
+POST /api/automation/run
 Se o PowerShell bloquear a ativação do ambiente virtual, execute uma vez:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Depois tente novamente:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### Windows — CMD
-
-Se estiver usando o Prompt de Comando em vez do PowerShell:
-
-```cmd
-cd backend
-python -m venv .venv
-.venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python seed.py
-python main.py
-```
-
-### Linux / macOS
-
+## 9. CI/CD
 ```bash
-cd backend
+O workflow `.github/workflows/ci.yml` executa testes com cobertura mínima de 70%, compilação Python e verificação de sintaxe JavaScript.
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install --upgrade pip
-pip install -r requirements.txt
+## 10. Estrutura principal
+python3 init_db.py
 python3 seed.py
 python3 main.py
-```
+````
 
 A API estará disponível em:
 
@@ -83,7 +56,13 @@ A API estará disponível em:
 http://localhost:5000
 ```
 
-O banco SQLite é criado automaticamente.
+Inicialize ou atualize o schema com `python init_db.py`. O projeto usa Flask-Migrate; a API não altera o schema automaticamente.
+
+Gere o hash da senha de login com:
+
+```powershell
+python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('sua-senha'))"
+```
 
 ### Variáveis de ambiente
 
@@ -93,6 +72,9 @@ Para configurar outro banco ou segredo, copie `.env.example` para `.env` e ajust
 DATABASE_URL
 SECRET_KEY
 JWT_SECRET_KEY
+AUTH_EMAIL
+AUTH_PASSWORD_HASH
+AUTH_NAME
 CORS_ORIGINS
 API_PORT
 ```
@@ -186,85 +168,49 @@ http://localhost:8080
 
 ## 6. Credenciais de desenvolvimento
 
-A carga de demonstração usa:
+Defina as credenciais no arquivo `.env` ou no ambiente do processo:
 
 ```text
-E-mail: admin@pricetracker.com
-Senha: admin123
+AUTH_EMAIL=admin@pricetracker.com
+AUTH_PASSWORD_HASH=<hash-gerado>
+AUTH_NAME=Administrador
 ```
 
-Essas credenciais são somente para desenvolvimento e não devem ser utilizadas em produção.
+Não há usuários ou senhas de login hardcoded no código da aplicação.
 
 ---
 
 ## 7. API principal
 
-| Método | Endpoint | Finalidade |
-|---|---|---|
-| GET | `/health` | Verificar disponibilidade |
-| POST | `/api/auth/login` | Obter JWT |
-| GET | `/api/auth/me` | Consultar sessão atual |
-| POST | `/api/auth/logout` | Encerrar sessão do cliente |
-| GET/POST/PUT/DELETE | `/api/stores` | CRUD de lojas |
-| GET/POST/PUT/DELETE | `/api/products` | CRUD de produtos |
-| GET | `/api/products/<id>/history` | Detalhes e histórico de alterações do produto |
-| GET/POST/PUT/DELETE | `/api/price-changes` | CRUD de alterações |
-| POST | `/api/price-changes/<id>/activate` | `pending` para `active` |
-| POST | `/api/price-changes/<id>/execute` | `active` para `executed` e atualiza o produto |
-| GET | `/api/dashboard` | Métricas e alterações recentes |
+| Método              | Endpoint                           | Finalidade                                    |
+| ------------------- | ---------------------------------- | --------------------------------------------- |
+| GET                 | `/health`                          | Verificar disponibilidade                     |
+| POST                | `/api/auth/login`                  | Obter JWT                                     |
+| GET                 | `/api/auth/me`                     | Consultar sessão atual                        |
+| POST                | `/api/auth/logout`                 | Encerrar sessão do cliente                    |
+| GET/POST/PUT/DELETE | `/api/stores`                      | CRUD de lojas                                 |
+| GET/POST/PUT/DELETE | `/api/products`                    | CRUD de produtos                              |
+| GET                 | `/api/products/<id>/history`       | Detalhes e histórico de alterações do produto |
+| GET/POST/PUT/DELETE | `/api/price-changes`               | CRUD de alterações                            |
+| POST                | `/api/price-changes/<id>/activate` | `pending` para `active`                       |
+| POST                | `/api/price-changes/<id>/execute`  | `active` para `executed` e atualiza o produto |
+| GET                 | `/api/dashboard`                   | Métricas e alterações recentes                |
 
 Todas as rotas, exceto `/health` e `/api/auth/login`, exigem `Authorization: Bearer <token>`. Alterações executadas não podem ser editadas ou canceladas. Alterações pendentes ou ativas podem ser canceladas.
 
 ---
 
-## 8. Worker
+## 8. Automação
 
-O worker executa automaticamente alterações `active` cuja data efetiva venceu.
-
-Para executar uma rodada manualmente:
-
-```bash
-cd backend
-python worker.py --max-retries 3
-```
-
-Para execução contínua:
-
-```bash
-python worker.py --loop --interval 60
-```
+A automação processa alterações `active` cuja data efetiva venceu através da API autenticada. Execute uma rodada manualmente com `POST /api/automation/run`.
 
 O processamento registra logs em `execution_logs`, auditoria em `audit_events` e retry controlado por `MAX_RETRIES`. Notificações por email são opcionais e utilizam SMTP configurado por ambiente; sem SMTP, o comportamento é dry-run no log.
 
 ---
 
-## 9. Docker
+## 9. CI/CD
 
-A execução completa também pode ser feita com Docker Compose.
-
-No Linux/macOS:
-
-```bash
-export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export JWT_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-docker compose up -d --build
-```
-
-No PowerShell:
-
-```powershell
-$env:SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
-$env:JWT_SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
-docker compose up -d --build
-```
-
-O Compose inicializa PostgreSQL, Redis, API, frontend Nginx e worker.
-
----
-
-## 10. CI/CD
-
-O workflow `.github/workflows/ci.yml` executa testes com cobertura mínima de 70%, compilação Python, sintaxe JavaScript, validação do Compose e builds das imagens.
+O workflow `.github/workflows/ci.yml` executa testes com cobertura mínima de 70%, compilação Python e verificação de sintaxe JavaScript.
 
 ---
 
@@ -276,7 +222,6 @@ Sistema-precificador/
 │   ├── .venv/              # Ambiente virtual local — não versionar
 │   ├── main.py             # Inicialização da API
 │   ├── seed.py             # Dados iniciais de desenvolvimento
-│   ├── worker.py            # Processamento automático
 │   ├── requirements.txt     # Dependências Python
 │   └── ...
 ├── frontend/
@@ -285,8 +230,6 @@ Sistema-precificador/
 │   └── js/
 ├── docs/
 ├── scripts/
-├── Dockerfile
-├── docker-compose.yml
 └── README.md
 ```
 
