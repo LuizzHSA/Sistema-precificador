@@ -18,18 +18,47 @@ from app.routes.catalog import catalog_bp
 load_dotenv()
 
 
+def _production_config_issues(app):
+    issues = []
+
+    secret_key = app.config.get("SECRET_KEY") or ""
+    jwt_secret = app.config.get("JWT_SECRET_KEY") or ""
+
+    if secret_key.startswith("dev-") or len(secret_key) < 32:
+        issues.append("SECRET_KEY")
+    if jwt_secret.startswith("jwt-secret") or len(jwt_secret) < 32:
+        issues.append("JWT_SECRET_KEY")
+    if not app.config.get("AUTH_EMAIL"):
+        issues.append("AUTH_EMAIL")
+    if not app.config.get("AUTH_PASSWORD_HASH"):
+        issues.append("AUTH_PASSWORD_HASH")
+
+    database_url = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
+    if not database_url or database_url.startswith("sqlite"):
+        issues.append("DATABASE_URL")
+
+    return issues
+
+
 def create_app(config_name=None):
     config_name = config_name or os.getenv("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config["default"]))
-    if config_name == "production" and (
-        app.config["SECRET_KEY"].startswith("dev-")
-        or app.config["JWT_SECRET_KEY"].startswith("jwt-secret")
-        or not app.config.get("AUTH_EMAIL")
-        or not app.config.get("AUTH_PASSWORD_HASH")
-    ):
-        raise RuntimeError("Segredos e credenciais de produção devem ser definidos por variáveis de ambiente")
-    logging.basicConfig(level=getattr(logging, app.config.get("LOG_LEVEL", "INFO").upper(), logging.INFO), format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+    logging.basicConfig(
+        level=getattr(logging, app.config.get("LOG_LEVEL", "INFO").upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+    config_issues = _production_config_issues(app) if config_name == "production" else []
+    if config_issues:
+        app.logger.error(
+            "production_configuration_incomplete missing_or_invalid=%s",
+            ",".join(config_issues),
+        )
+
+    app.config["PRODUCTION_CONFIG_ISSUES"] = config_issues
+
     request_hits = defaultdict(deque)
     db.init_app(app)
     jwt.init_app(app)
@@ -77,25 +106,56 @@ def create_app(config_name=None):
 
     @app.get("/health")
     def health():
-        return jsonify({"status": "ok", "service": "price-tracker"}), 200
+        issues = app.config.get("PRODUCTION_CONFIG_ISSUES", [])
+        if issues:
+            return jsonify({
+                "status": "degraded",
+                "service": "price-tracker",
+                "configuration": "incomplete",
+                "missing_or_invalid": issues,
+            }), 503
+        return jsonify({
+            "status": "ok",
+            "service": "price-tracker",
+            "configuration": "ok",
+        }), 200
 
     @app.get("/health/ready")
     def readiness():
+        issues = app.config.get("PRODUCTION_CONFIG_ISSUES", [])
+        if issues:
+            return jsonify({
+                "status": "not_ready",
+                "configuration": "incomplete",
+                "missing_or_invalid": issues,
+            }), 503
+
         try:
             db.session.execute(text("SELECT 1"))
-            return jsonify({"status": "ready", "database": "ok"}), 200
+            return jsonify({
+                "status": "ready",
+                "database": "ok",
+                "configuration": "ok",
+            }), 200
         except Exception as exc:  # noqa: BLE001
             app.logger.exception("readiness_check_failed")
-            return jsonify({"status": "not_ready", "database": "error", "error": str(exc)}), 503
+            return jsonify({
+                "status": "not_ready",
+                "database": "error",
+                "error": str(exc),
+            }), 503
 
     @app.get("/metrics")
     def metrics():
         from app.models import Product, Store, PriceChange
-        return jsonify({"stores_total": Store.query.count(), "products_total": Product.query.count(),
-                        "price_changes_total": PriceChange.query.count(),
-                        "price_changes_pending": PriceChange.query.filter_by(status="pending").count(),
-                        "price_changes_active": PriceChange.query.filter_by(status="active").count(),
-                        "price_changes_executed": PriceChange.query.filter_by(status="executed").count()})
+        return jsonify({
+            "stores_total": Store.query.count(),
+            "products_total": Product.query.count(),
+            "price_changes_total": PriceChange.query.count(),
+            "price_changes_pending": PriceChange.query.filter_by(status="pending").count(),
+            "price_changes_active": PriceChange.query.filter_by(status="active").count(),
+            "price_changes_executed": PriceChange.query.filter_by(status="executed").count(),
+        })
 
     @app.errorhandler(400)
     def bad_request(error):
@@ -117,15 +177,21 @@ def create_app(config_name=None):
     @app.errorhandler(Exception)
     def internal_error(error):
         db.session.rollback()
+        app.logger.exception("unhandled_application_error")
         if app.config.get("TESTING"):
             raise error
         return jsonify({"error": "Erro interno do servidor"}), 500
 
     with app.app_context():
         from app import models  # noqa: F401
+
     return app
 
 
 if __name__ == "__main__":
     application = create_app()
-    application.run(host="0.0.0.0", port=int(os.getenv("API_PORT", "5000")), debug=application.config["DEBUG"])
+    application.run(
+        host="0.0.0.0",
+        port=int(os.getenv("API_PORT", "5000")),
+        debug=application.config["DEBUG"],
+    )
