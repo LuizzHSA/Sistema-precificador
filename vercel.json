@@ -3,8 +3,6 @@
   "services": {
     "frontend": {
       "root": "frontend/",
-      "framework": null,
-      "installCommand": "",
       "buildCommand": "",
       "outputDirectory": "."
     },
