@@ -1,19 +1,57 @@
 #!/usr/bin/env python
 """Entrypoint WSGI do Sistema Precificador para Vercel e execução local."""
+
+import json
 import os
 import sys
-
-from dotenv import load_dotenv
+import traceback
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-load_dotenv()
 
-from app.main import create_app
+BOOT_ERROR = None
 
-# A Vercel carrega este objeto via "main:app".
-app = create_app()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    from app.main import create_app
+    app = create_app()
+
+except Exception as exc:  # noqa: BLE001
+    BOOT_ERROR = {
+        "type": type(exc).__name__,
+        "message": str(exc),
+        "traceback": traceback.format_exc(limit=8),
+    }
+
+    def app(environ, start_response):
+        payload = json.dumps(
+            {
+                "status": "boot_failed",
+                "service": "price-tracker",
+                "error_type": BOOT_ERROR["type"],
+                "error": BOOT_ERROR["message"],
+                "traceback": BOOT_ERROR["traceback"],
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        start_response(
+            "503 Service Unavailable",
+            [
+                ("Content-Type", "application/json; charset=utf-8"),
+                ("Content-Length", str(len(payload))),
+                ("Cache-Control", "no-store"),
+            ],
+        )
+        return [payload]
+
 
 if __name__ == "__main__":
+    if BOOT_ERROR:
+        print(json.dumps(BOOT_ERROR, ensure_ascii=False, indent=2))
+        raise SystemExit(1)
+
     app.run(
         host="0.0.0.0",
         port=int(os.getenv("API_PORT", "5000")),
