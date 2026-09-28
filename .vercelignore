@@ -1,0 +1,20 @@
+# Ambiente Python local (já existe rastreado no repositório)
+backend/venv/
+backend/.venv/
+
+# Artefatos locais e caches
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.coverage
+**/coverage.xml
+
+# Banco SQLite local: produção deve usar PostgreSQL externo
+backend/*.db
+
+# Arquivos sem necessidade no bundle de produção
+docs/
+.github/
+scripts/
+test.ps1
+start.ps1
