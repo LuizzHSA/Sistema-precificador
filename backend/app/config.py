@@ -5,6 +5,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _database_url():
+    """Resolve o banco local ou um PostgreSQL fornecido pela Vercel/integração."""
+    url = (
+        os.getenv("DATABASE_URL")
+        or os.getenv("POSTGRES_URL")
+        or os.getenv("POSTGRES_PRISMA_URL")
+        or os.getenv("POSTGRES_URL_NON_POOLING")
+    )
+    if not url:
+        return "sqlite:///price_tracker.db"
+
+    # Compatibilidade com URLs antigas no formato postgres://.
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+
+    return url
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret-key")
@@ -12,13 +30,16 @@ class Config:
     AUTH_PASSWORD_HASH = os.getenv("AUTH_PASSWORD_HASH")
     AUTH_NAME = os.getenv("AUTH_NAME", "Administrador")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///price_tracker.db")
+
+    SQLALCHEMY_DATABASE_URI = _database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO", "false").lower() == "true"
+
     JSON_SORT_KEYS = False
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", "1048576"))
     RATE_LIMIT = int(os.getenv("RATE_LIMIT", "120"))
     RATE_WINDOW_SECONDS = int(os.getenv("RATE_WINDOW_SECONDS", "60"))
+
     SMTP_HOST = os.getenv("SMTP_HOST")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USERNAME = os.getenv("SMTP_USERNAME")
@@ -27,9 +48,15 @@ class Config:
     SMTP_TLS = os.getenv("SMTP_TLS", "true").lower() == "true"
     NOTIFICATION_EMAIL = os.getenv("NOTIFICATION_EMAIL")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    CORS_ORIGINS = [origin.strip() for origin in os.getenv(
-        "CORS_ORIGINS", "http://localhost:8080,http://localhost:5173,http://localhost:3000"
-    ).split(",") if origin.strip()]
+
+    CORS_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:8080,http://localhost:5173,http://localhost:3000",
+        ).split(",")
+        if origin.strip()
+    ]
 
 
 class DevelopmentConfig(Config):
@@ -53,5 +80,9 @@ class TestingConfig(Config):
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
 
 
-config = {"development": DevelopmentConfig, "production": ProductionConfig,
-          "testing": TestingConfig, "default": DevelopmentConfig}
+config = {
+    "development": DevelopmentConfig,
+    "production": ProductionConfig,
+    "testing": TestingConfig,
+    "default": DevelopmentConfig,
+}
