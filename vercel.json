@@ -9,7 +9,6 @@
     },
     "backend": {
       "root": "backend/",
-      "framework": "flask",
       "entrypoint": "main:app"
     }
   },
