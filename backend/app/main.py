@@ -24,14 +24,8 @@ def _production_config_issues(app):
     secret_key = app.config.get("SECRET_KEY") or ""
     jwt_secret = app.config.get("JWT_SECRET_KEY") or ""
 
-    if secret_key.startswith("dev-") or len(secret_key) < 32:
-        issues.append("SECRET_KEY")
-    if jwt_secret.startswith("jwt-secret") or len(jwt_secret) < 32:
-        issues.append("JWT_SECRET_KEY")
-    if not app.config.get("AUTH_EMAIL"):
-        issues.append("AUTH_EMAIL")
-    if not app.config.get("AUTH_PASSWORD_HASH"):
-        issues.append("AUTH_PASSWORD_HASH")
+    # Autenticação está temporariamente desativada para acesso direto.
+    # Mantemos apenas a validação da infraestrutura necessária ao sistema.
 
     database_url = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
     if not database_url or database_url.startswith("sqlite"):
