@@ -6,21 +6,25 @@ load_dotenv()
 
 
 def _database_url():
-    """Resolve o banco local ou um PostgreSQL fornecido pela Vercel/integração."""
+    """Resolve PostgreSQL em produção/Vercel e SQLite apenas no ambiente local."""
     url = (
         os.getenv("DATABASE_URL")
         or os.getenv("POSTGRES_URL")
         or os.getenv("POSTGRES_PRISMA_URL")
         or os.getenv("POSTGRES_URL_NON_POOLING")
     )
-    if not url:
-        return "sqlite:///price_tracker.db"
 
-    # Compatibilidade com URLs antigas no formato postgres://.
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+    if url:
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
+        return url
 
-    return url
+    if os.getenv("VERCEL"):
+        # Mantém a aplicação inicializável para que /health exponha
+        # claramente a ausência do PostgreSQL, sem cair silenciosamente em SQLite.
+        return "sqlite:////tmp/price-tracker-missing-postgres.db"
+
+    return "sqlite:///price_tracker.db"
 
 
 class Config:
