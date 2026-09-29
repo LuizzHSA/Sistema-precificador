@@ -177,14 +177,23 @@ def audit_events():
 
 @price_bp.get("/dashboard")
 def dashboard():
-    counts = {status: PriceChange.query.filter_by(status=status).count() for status in PriceChange.VALID_STATUSES}
-    recent = PriceChange.query.order_by(PriceChange.created_at.desc()).limit(5).all()
-    today = datetime.utcnow().date()
-    today_items = [item for item in PriceChange.query.all() if item.created_at and item.created_at.date() == today]
-    all_items = PriceChange.query.all()
-    increases = sorted((item for item in all_items if item.price_difference > 0), key=lambda item: item.price_difference, reverse=True)[:5]
-    reductions = sorted((item for item in all_items if item.price_difference < 0), key=lambda item: item.price_difference)[:5]
-    return jsonify({"products": Product.query.count(), "stores": Store.query.count(), "price_changes": sum(counts.values()),
-                    "pending": counts["pending"], "active": counts["active"], "executed": counts["executed"], "cancelled": counts["cancelled"],
-                    "today": len(today_items), "today_changes": len(today_items), "recent": [item.to_dict() for item in recent],
-                    "largest_increases": [item.to_dict() for item in increases], "largest_reductions": [item.to_dict() for item in reductions]})
+    try:
+        counts = {status: PriceChange.query.filter_by(status=status).count() for status in PriceChange.VALID_STATUSES}
+        recent = PriceChange.query.order_by(PriceChange.created_at.desc()).limit(5).all()
+        today = datetime.utcnow().date()
+        today_items = [item for item in PriceChange.query.all() if item.created_at and item.created_at.date() == today]
+        all_items = PriceChange.query.all()
+        increases = sorted((item for item in all_items if item.price_difference > 0), key=lambda item: item.price_difference, reverse=True)[:5]
+        reductions = sorted((item for item in all_items if item.price_difference < 0), key=lambda item: item.price_difference)[:5]
+        return jsonify({"products": Product.query.count(), "stores": Store.query.count(), "price_changes": sum(counts.values()),
+                        "pending": counts["pending"], "active": counts["active"], "executed": counts["executed"], "cancelled": counts["cancelled"],
+                        "today": len(today_items), "today_changes": len(today_items), "recent": [item.to_dict() for item in recent],
+                        "largest_increases": [item.to_dict() for item in increases], "largest_reductions": [item.to_dict() for item in reductions]})
+    except Exception as exc:  # noqa: BLE001
+        current = type(exc).__name__
+        message = str(exc)
+        return jsonify({
+            "error": "Falha ao carregar métricas",
+            "type": current,
+            "detail": message[:1200],
+        }), 503
