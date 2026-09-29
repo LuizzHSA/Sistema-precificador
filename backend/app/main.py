@@ -189,6 +189,16 @@ def create_app(config_name=None):
     with app.app_context():
         from app import models  # noqa: F401
 
+        # Na Vercel/produção, garante que um PostgreSQL novo tenha o schema
+        # mínimo necessário para o sistema funcionar imediatamente.
+        database_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        if database_url and not database_url.startswith("sqlite"):
+            try:
+                db.create_all()
+                app.logger.info("database_schema_ready")
+            except Exception:
+                app.logger.exception("database_schema_initialization_failed")
+
     return app
 
 
