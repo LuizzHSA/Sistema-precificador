@@ -2,22 +2,16 @@ class APIClient {
   constructor() {
     const developmentURL = window.location.hostname === 'localhost' && window.location.port === '8080' ? 'http://localhost:5000/api' : '/api';
     this.baseURL = window.API_BASE_URL || localStorage.getItem('apiBaseURL') || developmentURL;
-    this.token = localStorage.getItem('token');
   }
-  setToken(token) { this.token = token; localStorage.setItem('token', token); }
-  getToken() { return this.token; }
-  removeToken() { this.token = null; localStorage.removeItem('token'); }
   setBaseURL(url) { this.baseURL = url.replace(/\/$/, ''); window.API_BASE_URL = this.baseURL; localStorage.setItem('apiBaseURL', this.baseURL); }
   async request(method, endpoint, data = null) {
     const headers = { Accept: 'application/json' };
     if (data !== null) headers['Content-Type'] = 'application/json';
-    if (this.token) headers.Authorization = `Bearer ${this.token}`;
     const response = await fetch(`${this.baseURL}${endpoint}`, { method, headers, body: data === null ? undefined : JSON.stringify(data) });
     const text = await response.text();
     let json = {};
     try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text || 'Resposta inválida da API' }; }
     if (!response.ok) {
-      if (response.status === 401) { this.removeToken(); window.location.hash = '#/login'; }
       throw { status: response.status, message: json.error || 'Erro na requisição', data: json };
     }
     return json;
@@ -26,9 +20,6 @@ class APIClient {
   post(endpoint, data = {}) { return this.request('POST', endpoint, data); }
   put(endpoint, data = {}) { return this.request('PUT', endpoint, data); }
   delete(endpoint) { return this.request('DELETE', endpoint); }
-  login(email, password) { return this.post('/auth/login', { email, password }); }
-  getMe() { return this.get('/auth/me'); }
-  logout() { return this.post('/auth/logout'); }
   getDashboard() { return this.get('/dashboard'); }
   getStores(search = '') { return this.get(`/stores${search ? `?search=${encodeURIComponent(search)}` : ''}`); }
   createStore(data) { return this.post('/stores', data); }
