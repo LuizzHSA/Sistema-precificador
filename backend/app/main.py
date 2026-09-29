@@ -35,7 +35,7 @@ def _production_config_issues(app):
 
 
 def create_app(config_name=None):
-    config_name = config_name or os.getenv("FLASK_ENV", "development")
+    config_name = config_name or os.getenv("FLASK_ENV") or ("production" if os.getenv("VERCEL") else "development")
     instance_path = "/tmp/price-tracker-instance" if os.getenv("VERCEL") else None
     app = Flask(__name__, instance_path=instance_path) if instance_path else Flask(__name__)
     app.config.from_object(config.get(config_name, config["default"]))
