@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
 from sqlalchemy import or_
 from app import db
 from app.models import PriceChange, Product, Store, ExecutionLog, AuditEvent
@@ -33,7 +32,6 @@ def _price(value):
 
 
 @price_bp.get("/price-changes")
-@jwt_required()
 def list_price_changes():
     query = PriceChange.query
     for field in ("status", "store_id", "product_id"):
@@ -58,14 +56,12 @@ def list_price_changes():
 
 
 @price_bp.get("/price-changes/<price_change_id>")
-@jwt_required()
 def get_price_change(price_change_id):
     item = db.session.get(PriceChange, price_change_id)
     return jsonify(item.to_dict()) if item else (jsonify({"error": "Alteração de preço não encontrada"}), 404)
 
 
 @price_bp.post("/price-changes")
-@jwt_required()
 def create_price_change():
     data = _json()
     required = [field for field in ("store_id", "product_id", "new_price", "effective_date") if data.get(field) in (None, "")]
@@ -93,7 +89,6 @@ def create_price_change():
 
 
 @price_bp.put("/price-changes/<price_change_id>")
-@jwt_required()
 def update_price_change(price_change_id):
     item = db.session.get(PriceChange, price_change_id)
     if not item:
@@ -119,7 +114,6 @@ def update_price_change(price_change_id):
 
 
 @price_bp.post("/price-changes/<price_change_id>/activate")
-@jwt_required()
 def activate_price_change(price_change_id):
     item = db.session.get(PriceChange, price_change_id)
     if not item:
@@ -133,7 +127,6 @@ def activate_price_change(price_change_id):
 
 
 @price_bp.post("/price-changes/<price_change_id>/execute")
-@jwt_required()
 def execute_price_change(price_change_id):
     item = db.session.get(PriceChange, price_change_id)
     if not item:
@@ -149,7 +142,6 @@ def execute_price_change(price_change_id):
 
 
 @price_bp.delete("/price-changes/<price_change_id>")
-@jwt_required()
 def cancel_price_change(price_change_id):
     item = db.session.get(PriceChange, price_change_id)
     if not item:
@@ -163,14 +155,12 @@ def cancel_price_change(price_change_id):
 
 
 @price_bp.post("/automation/run")
-@jwt_required()
 def run_automation():
     result = process_due_price_changes()
     return jsonify(result), 200
 
 
 @price_bp.get("/execution-logs")
-@jwt_required()
 def execution_logs():
     logs = ExecutionLog.query.order_by(ExecutionLog.created_at.desc()).limit(100).all()
     return jsonify([{"id": log.id, "price_change_id": log.price_change_id, "status": log.status,
@@ -178,7 +168,6 @@ def execution_logs():
 
 
 @price_bp.get("/audit-events")
-@jwt_required()
 def audit_events():
     events = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(100).all()
     return jsonify([{"id": event.id, "action": event.action, "entity_type": event.entity_type,
@@ -187,7 +176,6 @@ def audit_events():
 
 
 @price_bp.get("/dashboard")
-@jwt_required()
 def dashboard():
     counts = {status: PriceChange.query.filter_by(status=status).count() for status in PriceChange.VALID_STATUSES}
     recent = PriceChange.query.order_by(PriceChange.created_at.desc()).limit(5).all()
