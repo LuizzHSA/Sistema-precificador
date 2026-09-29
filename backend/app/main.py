@@ -177,11 +177,20 @@ def create_app(config_name=None):
 
     @app.errorhandler(Exception)
     def internal_error(error):
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            app.logger.exception("database_rollback_failed")
+
         app.logger.exception("unhandled_application_error")
+
         if app.config.get("TESTING"):
             raise error
-        return jsonify({"error": "Erro interno do servidor"}), 500
+
+        return jsonify({
+            "error": "Erro interno do servidor",
+            "type": type(error).__name__,
+        }), 500
 
     with app.app_context():
         from app import models  # noqa: F401
