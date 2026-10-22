@@ -16,7 +16,7 @@ Sem `SMTP_HOST`, a aplicação não envia email: registra a notificação como d
 
 ## Contas, tokens e migrações do banco
 
-O schema de contas e isolamento de dados está nas migrations `0002_user_accounts` e `0003_user_token_version`. A segunda migration adiciona a versão do token usada para invalidar sessões no logout. O logout invalida todos os tokens existentes daquela conta; o usuário precisa entrar novamente.
+O schema de contas e isolamento de dados está nas migrations `0002_user_accounts`, `0003_user_token_version` e `0004_tenant_store_email`. A migration `0003` adiciona a versão do token usada para invalidar sessões no logout. A migration `0004` permite que contas diferentes cadastrem lojas com o mesmo e-mail, mantendo a unicidade dentro de cada conta. O logout invalida todos os tokens existentes daquela conta; o usuário precisa entrar novamente.
 
 Antes de publicar esta versão em um banco existente, faça backup e aplique as migrations a partir da pasta `backend`, com o ambiente e `DATABASE_URL` configurados:
 
