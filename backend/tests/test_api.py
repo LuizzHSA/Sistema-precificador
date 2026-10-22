@@ -289,3 +289,14 @@ def test_product_update_rejects_overlong_fields(client):
     assert response.status_code == 400
     response = client.put(f"/api/products/{product['id']}", headers=headers, json={"sku": "S" * 81})
     assert response.status_code == 400
+
+
+
+def test_timezone_aware_effective_date_is_normalized_to_utc(client):
+    headers, store, product = catalog(client)
+    response = client.post("/api/price-changes", headers=headers, json={
+        "store_id": store["id"], "product_id": product["id"], "new_price": 105,
+        "effective_date": "2030-01-01T12:00:00-03:00",
+    })
+    assert response.status_code == 201
+    assert response.json["data"]["effective_date"].startswith("2030-01-01T15:00:00")
