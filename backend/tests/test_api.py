@@ -153,6 +153,14 @@ def test_product_history_details_and_sku_uniqueness(client):
     assert client.get("/api/products/missing/history", headers=headers).status_code == 404
 
 
+def test_price_change_pagination_rejects_invalid_parameters(client):
+    headers = auth(client)
+    for query in ("page=abc", "page=0", "per_page=nope", "per_page=0"):
+        response = client.get(f"/api/price-changes?{query}", headers=headers)
+        assert response.status_code == 400
+        assert response.json["error"] == "Parâmetros de paginação inválidos"
+
+
 def test_registration_creates_persistent_user_and_rejects_weak_password(client):
     weak = client.post("/api/auth/register", json={"name": "Nova Conta", "email": "nova@example.com", "password": "curta"})
     assert weak.status_code == 400
