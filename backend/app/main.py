@@ -3,12 +3,12 @@ import os
 import time
 from collections import defaultdict, deque
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_jwt_extended import verify_jwt_in_request
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
-from sqlalchemy import text
+from sqlalchemy import text, event, with_loader_criteria
 from sqlalchemy.exc import IntegrityError
 
 from app.config import config
@@ -16,6 +16,7 @@ from app import db, jwt, migrate
 from app.routes.auth import auth_bp
 from app.routes.price_changes import price_bp
 from app.routes.catalog import catalog_bp
+from app.models import User, Store, Product, PriceChange, ExecutionLog, AuditEvent
 
 load_dotenv()
 
@@ -63,6 +64,25 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
+    owned_models = (Store, Product, PriceChange, ExecutionLog, AuditEvent)
+
+    @event.listens_for(db.session.session_factory.class_, "before_flush")
+    def assign_record_owner(session, flush_context, instances):
+        owner_id = getattr(g, "current_user_id", None)
+        if owner_id:
+            for obj in session.new:
+                if isinstance(obj, owned_models) and getattr(obj, "owner_id", None) is None:
+                    obj.owner_id = owner_id
+
+    @event.listens_for(db.session.session_factory.class_, "do_orm_execute")
+    def scope_owned_queries(execute_state):
+        owner_id = getattr(g, "current_user_id", None)
+        if owner_id and execute_state.is_select:
+            for model in owned_models:
+                execute_state.statement = execute_state.statement.options(
+                    with_loader_criteria(model, lambda cls: cls.owner_id == owner_id, include_aliases=True)
+                )
+
     @app.before_request
     def enforce_rate_limit_and_auth():
         public_paths = {"/", "/health", "/health/ready"}
@@ -77,11 +97,16 @@ def create_app(config_name=None):
 
         # Login is the only public API operation. All business and operational
         # API routes require a valid JWT; auth endpoints also enforce JWT where needed.
-        if request.path == "/api/auth/login" and request.method == "POST":
+        if request.path in {"/api/auth/login", "/api/auth/register"} and request.method == "POST":
             return None
         if request.path.startswith("/api/"):
             try:
                 verify_jwt_in_request()
+                identity = str(__import__("flask_jwt_extended").get_jwt_identity())
+                user = db.session.get(User, identity)
+                if not user or not user.is_active:
+                    return jsonify({"error": "Usuário inativo ou inexistente"}), 401
+                g.current_user_id = user.id
             except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
                 return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         if request.path == "/metrics":
