@@ -15,7 +15,7 @@ const SettingsPage = {
             <input
               id="apiBaseUrl"
               class="form-input"
-              value="${currentApi}"
+              value="${escapeHtml(currentApi)}"
               ${isLocal ? '' : 'disabled'}
             >
           </div>
@@ -33,7 +33,7 @@ const SettingsPage = {
 
           <h4>Ambiente</h4>
           <p>Frontend: ${isLocal ? 'local' : 'Vercel / produção'}</p>
-          <p>API: ${currentApi}</p>
+          <p>API: ${escapeHtml(currentApi)}</p>
         </div>
       </div>
     `;
