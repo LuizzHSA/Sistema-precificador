@@ -250,3 +250,19 @@ def test_store_duplicate_email_returns_conflict(client):
     })
     assert duplicate.status_code == 409
     assert duplicate.json["error"] == "Já existe uma loja com este email"
+
+
+
+def test_price_change_rejects_non_finite_prices_and_long_reason(client):
+    headers, store, product = catalog(client)
+    for invalid_price in (float("nan"), float("inf"), float("-inf")):
+        response = client.post("/api/price-changes", headers=headers, json={
+            "store_id": store["id"], "product_id": product["id"],
+            "new_price": invalid_price, "effective_date": datetime.utcnow().isoformat(),
+        })
+        assert response.status_code == 400
+    response = client.post("/api/price-changes", headers=headers, json={
+        "store_id": store["id"], "product_id": product["id"], "new_price": 110,
+        "effective_date": datetime.utcnow().isoformat(), "reason": "x" * 501,
+    })
+    assert response.status_code == 400
