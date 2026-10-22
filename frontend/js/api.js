@@ -2,20 +2,22 @@ class APIClient {
   constructor() {
     const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const defaultURL = isLocal ? 'http://localhost:5000/api' : '/api';
-
-    // Em produção, sempre usa a API no mesmo domínio da Vercel.
-    // Evita URLs antigas de localhost salvas no navegador.
-    if (!isLocal) {
-      localStorage.removeItem('apiBaseURL');
-    }
-
+    if (!isLocal) localStorage.removeItem('apiBaseURL');
     this.baseURL = window.API_BASE_URL || (isLocal ? localStorage.getItem('apiBaseURL') : null) || defaultURL;
+  }
+
+  getToken() {
+    return sessionStorage.getItem('accessToken');
+  }
+
+  setToken(token) {
+    if (token) sessionStorage.setItem('accessToken', token);
+    else sessionStorage.removeItem('accessToken');
   }
 
   setBaseURL(url) {
     const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     this.baseURL = isLocal ? url.replace(/\/$/, '') : '/api';
-
     if (isLocal) {
       window.API_BASE_URL = this.baseURL;
       localStorage.setItem('apiBaseURL', this.baseURL);
@@ -27,31 +29,52 @@ class APIClient {
   async request(method, endpoint, data = null) {
     const headers = { Accept: 'application/json' };
     if (data !== null) headers['Content-Type'] = 'application/json';
+    const token = this.getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      method,
-      headers,
-      body: data === null ? undefined : JSON.stringify(data),
-    });
+    let response;
+    try {
+      response = await fetch(`${this.baseURL}${endpoint}`, {
+        method,
+        headers,
+        body: data === null ? undefined : JSON.stringify(data),
+      });
+    } catch {
+      throw { status: 0, message: 'Não foi possível conectar à API. Verifique sua conexão e a URL do backend.' };
+    }
 
     const text = await response.text();
     let json = {};
-
     try {
       json = text ? JSON.parse(text) : {};
     } catch {
       json = { error: text || 'Resposta inválida da API' };
     }
 
-    if (!response.ok) {
-      throw {
-        status: response.status,
-        message: json.error || 'Erro na requisição',
-        data: json,
-      };
+    if (response.status === 401 && endpoint !== '/auth/login') {
+      this.setToken(null);
+      if (window.app && window.app.handleUnauthorized) window.app.handleUnauthorized();
     }
-
+    if (!response.ok) {
+      throw { status: response.status, message: json.error || 'Erro na requisição', data: json };
+    }
     return json;
+  }
+
+  async login(email, password) {
+    const result = await this.request('POST', '/auth/login', { email, password });
+    this.setToken(result.access_token || result.token);
+    return result.user;
+  }
+
+  async currentUser() { return this.get('/auth/me'); }
+
+  async logout() {
+    try {
+      if (this.getToken()) await this.post('/auth/logout');
+    } finally {
+      this.setToken(null);
+    }
   }
 
   get(endpoint) { return this.request('GET', endpoint); }
