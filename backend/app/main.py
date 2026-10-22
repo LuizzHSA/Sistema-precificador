@@ -2,7 +2,11 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
+
 from flask import Flask, jsonify, request
+from flask_jwt_extended import verify_jwt_in_request
+from flask_jwt_extended.exceptions import NoAuthorizationError, InvalidHeaderError
+from jwt import ExpiredSignatureError, InvalidTokenError
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -20,18 +24,20 @@ load_dotenv()
 
 def _production_config_issues(app):
     issues = []
-
-    secret_key = app.config.get("SECRET_KEY") or ""
-    jwt_secret = app.config.get("JWT_SECRET_KEY") or ""
-
-    # Autenticação está temporariamente desativada para acesso direto.
-    # Mantemos apenas a validação da infraestrutura necessária ao sistema.
+    for key in ("SECRET_KEY", "JWT_SECRET_KEY", "AUTH_EMAIL", "AUTH_PASSWORD_HASH"):
+        value = app.config.get(key)
+        if not value:
+            issues.append(key)
+        elif key in {"SECRET_KEY", "JWT_SECRET_KEY"} and (
+            value in {"dev-secret-key", "jwt-secret-key"} or len(value) < 32
+        ):
+            issues.append(key)
 
     database_url = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
     if not database_url or database_url.startswith("sqlite"):
         issues.append("DATABASE_URL")
 
-    return issues
+    return sorted(set(issues))
 
 
 def create_app(config_name=None):
@@ -51,7 +57,6 @@ def create_app(config_name=None):
             "production_configuration_incomplete missing_or_invalid=%s",
             ",".join(config_issues),
         )
-
     app.config["PRODUCTION_CONFIG_ISSUES"] = config_issues
 
     request_hits = defaultdict(deque)
@@ -61,16 +66,31 @@ def create_app(config_name=None):
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
     @app.before_request
-    def enforce_rate_limit():
-        if request.path in ("/", "/health", "/health/ready"):
+    def enforce_rate_limit_and_auth():
+        public_paths = {"/", "/health", "/health/ready"}
+        if request.path not in public_paths:
+            now = time.monotonic()
+            bucket = request_hits[request.remote_addr or "unknown"]
+            while bucket and now - bucket[0] > app.config["RATE_WINDOW_SECONDS"]:
+                bucket.popleft()
+            if len(bucket) >= app.config["RATE_LIMIT"]:
+                return jsonify({"error": "Limite de requisições excedido"}), 429
+            bucket.append(now)
+
+        # Login is the only public API operation. All business and operational
+        # API routes require a valid JWT; auth endpoints also enforce JWT where needed.
+        if request.path == "/api/auth/login" and request.method == "POST":
             return None
-        now = time.monotonic()
-        bucket = request_hits[request.remote_addr or "unknown"]
-        while bucket and now - bucket[0] > app.config["RATE_WINDOW_SECONDS"]:
-            bucket.popleft()
-        if len(bucket) >= app.config["RATE_LIMIT"]:
-            return jsonify({"error": "Limite de requisições excedido"}), 429
-        bucket.append(now)
+        if request.path.startswith("/api/"):
+            try:
+                verify_jwt_in_request()
+            except (NoAuthorizationError, InvalidHeaderError, ExpiredSignatureError, InvalidTokenError):
+                return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
+        if request.path == "/metrics":
+            try:
+                verify_jwt_in_request()
+            except (NoAuthorizationError, InvalidHeaderError, ExpiredSignatureError, InvalidTokenError):
+                return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         return None
 
     @app.after_request
@@ -124,21 +144,12 @@ def create_app(config_name=None):
                 "configuration": "incomplete",
                 "missing_or_invalid": issues,
             }), 503
-
         try:
             db.session.execute(text("SELECT 1"))
-            return jsonify({
-                "status": "ready",
-                "database": "ok",
-                "configuration": "ok",
-            }), 200
-        except Exception as exc:  # noqa: BLE001
+            return jsonify({"status": "ready", "database": "ok", "configuration": "ok"}), 200
+        except Exception:  # noqa: BLE001
             app.logger.exception("readiness_check_failed")
-            return jsonify({
-                "status": "not_ready",
-                "database": "error",
-                "error": str(exc),
-            }), 503
+            return jsonify({"status": "not_ready", "database": "error"}), 503
 
     @app.get("/metrics")
     def metrics():
@@ -175,22 +186,14 @@ def create_app(config_name=None):
             db.session.rollback()
         except Exception:
             app.logger.exception("database_rollback_failed")
-
         app.logger.exception("unhandled_application_error")
-
         if app.config.get("TESTING"):
             raise error
-
-        return jsonify({
-            "error": "Erro interno do servidor",
-            "type": type(error).__name__,
-        }), 500
+        return jsonify({"error": "Erro interno do servidor"}), 500
 
     with app.app_context():
         from app import models  # noqa: F401
-
-        # Na Vercel/produção, garante que um PostgreSQL novo tenha o schema
-        # mínimo necessário para o sistema funcionar imediatamente.
+        # Existing deployment bootstrapping is retained for compatibility for now.
         database_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
         if database_url and not database_url.startswith("sqlite"):
             try:
