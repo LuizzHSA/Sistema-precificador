@@ -14,7 +14,7 @@ Alterações com status `active` e `effective_date` vencida são executadas uma 
 
 Sem `SMTP_HOST`, a aplicação não envia email: registra a notificação como dry-run. Para ativar envio, configure `NOTIFICATION_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` e `SMTP_TLS`. O template padrão inclui produto, loja, status e valores da alteração.
 
-## Backup e restauração
+## Contas e migração do banco\n\nO schema de contas e isolamento de dados está na migration `0002_user_accounts`. Antes de publicar esta versão em um banco existente, faça backup e aplique as migrations a partir da pasta `backend` com o ambiente e `DATABASE_URL` configurados:\n\n```bash\nflask --app 'app.main:create_app' db upgrade\n```\n\nO login administrativo legado pode continuar usando `AUTH_EMAIL` e `AUTH_PASSWORD_HASH`; os novos cadastros são persistidos na tabela `users`. No primeiro login do administrador legado, os registros antigos sem `owner_id` são associados a essa conta. Não habilite tráfego da nova versão antes de aplicar a migration.\n\n## Backup e restauração
 
 O script `scripts/backup.sh` suporta SQLite e PostgreSQL:
 
