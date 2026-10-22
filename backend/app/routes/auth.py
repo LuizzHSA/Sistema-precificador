@@ -93,7 +93,7 @@ def login():
         return jsonify({"error": "Credenciais inválidas"}), 401
     if not password_ok:
         return jsonify({"error": "E-mail ou senha inválidos"}), 401
-    token = create_access_token(identity=user.id)
+    token = issue_access_token(user)
     return jsonify({"message": "Login realizado com sucesso", "token": token,
                     "access_token": token, "user": user.to_dict()}), 200
 
