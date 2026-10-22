@@ -8,7 +8,7 @@ const ProductsPage = {
       const draw = list => {
         document.getElementById('productsTable').innerHTML = list.length ? list.map(p => `<tr><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.sku)}</td><td>${escapeHtml(p.store || '-')}</td><td>R$ ${Number(p.current_price).toFixed(2)}</td><td><button class="btn btn--small details-product" data-id="${escapeHtml(p.id)}">Detalhes</button> <button class="btn btn--small edit-product" data-id="${escapeHtml(p.id)}">Editar</button> <button class="btn btn--small delete-product" data-id="${escapeHtml(p.id)}">Excluir</button></td></tr>`).join('') : '<tr><td colspan="5">Nenhum produto encontrado.</td></tr>';
         content.querySelectorAll('.details-product').forEach(btn => btn.onclick = () => this.details(btn.dataset.id));
-        content.querySelectorAll('.edit-product').forEach(btn => btn.onclick = () => this.form(items.find(p => p.id === btn.dataset.id), stores));
+        content.querySelectorAll('.edit-product').forEach(btn => btn.onclick = () => this.form(list.find(p => p.id === btn.dataset.id), stores));
         content.querySelectorAll('.delete-product').forEach(btn => btn.onclick = () => this.delete(btn.dataset.id));
       };
       draw(items);
@@ -33,7 +33,7 @@ const ProductsPage = {
       const changes = result.data || [], product = result.product, box = document.getElementById('productForm');
       box.innerHTML = `<div class="card margin-top"><div class="card-header"><h4>${escapeHtml(product.name)}</h4><button id="closeProductDetails" class="btn">Fechar</button></div><div class="card-body"><p><strong>SKU:</strong> ${escapeHtml(product.sku)} | <strong>Loja:</strong> ${escapeHtml(product.store || '-')} | <strong>Preço atual:</strong> R$ ${Number(product.current_price).toFixed(2)}</p><h5>Histórico de preços</h5>${changes.length ? `<table><thead><tr><th>Data</th><th>Anterior</th><th>Novo</th><th>Status</th><th>Variação</th></tr></thead><tbody>${changes.map(item => `<tr><td>${new Date(item.created_at).toLocaleString('pt-BR')}</td><td>R$ ${Number(item.current_price).toFixed(2)}</td><td>R$ ${Number(item.new_price).toFixed(2)}</td><td>${escapeHtml(item.status)}</td><td>${item.percentage_change}%</td></tr>`).join('')}</tbody></table>` : '<p>Nenhuma alteração registrada.</p>'}</div></div>`;
       document.getElementById('closeProductDetails').onclick = () => { box.innerHTML = ''; };
-    } catch (error) { showToast(error.message, 'error'); }
+    } catch (error) { showToast(error.message || 'Não foi possível carregar o histórico do produto', 'error'); }
   },
   form(product, stores) {
     const box = document.getElementById('productForm');
