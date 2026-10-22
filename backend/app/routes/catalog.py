@@ -130,10 +130,21 @@ def update_product(product_id):
         if not math.isfinite(price): return jsonify({"error": "Preço deve ser um número finito"}), 400
         if price <= 0: return jsonify({"error": "Preço deve ser maior que zero"}), 400
         product.current_price = price
-    for field in ("name", "sku"):
-        if field in data and not str(data[field]).strip(): return jsonify({"error": f"{field} é obrigatório"}), 400
-        if field in data: setattr(product, field, str(data[field]).strip())
-    db.session.commit(); return jsonify({"data": product.to_dict()})
+    limits = {"name": 160, "sku": 80}
+    for field, maximum in limits.items():
+        if field in data:
+            value = str(data[field] or "").strip()
+            if not value or len(value) > maximum:
+                return jsonify({"error": f"{field} deve ter entre 1 e {maximum} caracteres"}), 400
+            setattr(product, field, value)
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+            return jsonify({"error": "Já existe um produto com este SKU nesta loja"}), 409
+        raise
+    return jsonify({"data": product.to_dict()})
 
 @catalog_bp.delete("/products/<product_id>")
 def delete_product(product_id):
