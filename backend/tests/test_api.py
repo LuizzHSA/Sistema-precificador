@@ -220,3 +220,33 @@ def test_user_data_is_isolated_between_accounts(client):
     assert client.get("/api/audit-events", headers=headers_two).json == []
     assert client.get("/api/dashboard", headers=headers_two).json["products"] == 0
     assert client.get("/metrics", headers=headers_two).json["products_total"] == 0
+
+
+
+def test_catalog_rejects_non_finite_and_out_of_range_values(client):
+    headers, store, _ = catalog(client)
+    for invalid_price in (float("nan"), float("inf"), float("-inf")):
+        response = client.post("/api/products", headers=headers, json={
+            "store_id": store["id"], "name": "Preço inválido", "sku": f"BAD-{str(invalid_price)}",
+            "current_price": invalid_price,
+        })
+        assert response.status_code == 400
+        assert "Preço" in response.json["error"]
+
+    too_long_name = client.post("/api/stores", headers=headers, json={
+        "name": "L" * 121, "email": "longname@example.com",
+    })
+    assert too_long_name.status_code == 400
+
+
+def test_store_duplicate_email_returns_conflict(client):
+    headers = auth(client)
+    first = client.post("/api/stores", headers=headers, json={
+        "name": "Loja A", "email": "same@example.com",
+    })
+    assert first.status_code == 201
+    duplicate = client.post("/api/stores", headers=headers, json={
+        "name": "Loja B", "email": "SAME@example.com",
+    })
+    assert duplicate.status_code == 409
+    assert duplicate.json["error"] == "Já existe uma loja com este email"
