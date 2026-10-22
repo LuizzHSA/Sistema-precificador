@@ -67,7 +67,13 @@ class APIClient {
     return result.user;
   }
 
-  async register(name, email, password) {\n    const result = await this.request('POST', '/auth/register', { name, email, password });\n    this.setToken(result.access_token || result.token);\n    return result.user;\n  }\n\n  async currentUser() { return this.get('/auth/me'); }
+  async register(name, email, password) {
+    const result = await this.request('POST', '/auth/register', { name, email, password });
+    this.setToken(result.access_token || result.token);
+    return result.user;
+  }
+
+  async currentUser() { return this.get('/auth/me'); }
 
   async logout() {
     try {
