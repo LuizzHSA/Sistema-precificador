@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import datetime
 from flask import Blueprint, jsonify, request
@@ -26,7 +27,7 @@ def _date(value):
 def _price(value):
     try:
         result = float(value)
-        return result if result > 0 else None
+        return result if math.isfinite(result) and result > 0 else None
     except (TypeError, ValueError):
         return None
 
@@ -98,7 +99,10 @@ def create_price_change():
         return jsonify({"error": "Novo preço deve ser maior que zero"}), 400
     if effective_date is None:
         return jsonify({"error": "Data efetiva inválida"}), 400
-    item = PriceChange(id=str(uuid.uuid4()), store_id=store.id, product_id=product.id, current_price=float(product.current_price), new_price=new_price, effective_date=effective_date, reason=data.get("reason", ""), status="pending")
+    reason = str(data.get("reason") or "").strip()
+    if len(reason) > 500:
+        return jsonify({"error": "Motivo deve ter até 500 caracteres"}), 400
+    item = PriceChange(id=str(uuid.uuid4()), store_id=store.id, product_id=product.id, current_price=float(product.current_price), new_price=new_price, effective_date=effective_date, reason=reason, status="pending")
     db.session.add(item)
     record_audit("price_change.created", "price_change", item.id, {"new_price": new_price, "product_id": product.id})
     db.session.commit()
@@ -124,7 +128,10 @@ def update_price_change(price_change_id):
             return jsonify({"error": "Data efetiva inválida"}), 400
         item.effective_date = date
     if "reason" in data:
-        item.reason = data["reason"]
+        reason = str(data["reason"] or "").strip()
+        if len(reason) > 500:
+            return jsonify({"error": "Motivo deve ter até 500 caracteres"}), 400
+        item.reason = reason
     record_audit("price_change.updated", "price_change", item.id, {"status": item.status})
     db.session.commit()
     return jsonify({"message": "Alteração de preço atualizada com sucesso", "data": item.to_dict()})
