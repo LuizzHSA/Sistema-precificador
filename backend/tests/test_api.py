@@ -38,6 +38,18 @@ def test_health_and_auth(client):
     headers = auth(client)
     assert client.get("/api/auth/me", headers=headers).status_code == 200
     assert client.post("/api/auth/logout", headers=headers).status_code == 200
+    assert client.get("/api/auth/me", headers=headers).status_code == 401
+
+
+def test_logout_revokes_existing_token_and_requires_new_login(client):
+    headers = auth(client)
+    assert client.get("/api/auth/me", headers=headers).status_code == 200
+    logout = client.post("/api/auth/logout", headers=headers)
+    assert logout.status_code == 200
+    assert client.get("/api/auth/me", headers=headers).status_code == 401
+    assert client.get("/api/stores", headers=headers).status_code == 401
+    new_headers = auth(client)
+    assert client.get("/api/auth/me", headers=new_headers).status_code == 200
 
 
 def test_all_business_and_metrics_routes_require_authentication(client):
