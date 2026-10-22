@@ -31,6 +31,21 @@ def _price(value):
         return None
 
 
+def _pagination_value(name, default, minimum, maximum=None):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if value < minimum:
+        return None
+    if maximum is not None:
+        value = min(value, maximum)
+    return value
+
+
 @price_bp.get("/price-changes")
 def list_price_changes():
     query = PriceChange.query
@@ -49,8 +64,10 @@ def list_price_changes():
         end = _date(request.args["to"])
         if end:
             query = query.filter(PriceChange.effective_date <= end)
-    page = max(int(request.args.get("page", 1)), 1)
-    per_page = min(max(int(request.args.get("per_page", 20)), 1), 100)
+    page = _pagination_value("page", 1, 1)
+    per_page = _pagination_value("per_page", 20, 1, 100)
+    if page is None or per_page is None:
+        return jsonify({"error": "Parâmetros de paginação inválidos"}), 400
     pagination = query.order_by(PriceChange.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return jsonify({"data": [item.to_dict() for item in pagination.items], "items": [item.to_dict() for item in pagination.items], "total": pagination.total, "pages": pagination.pages, "page": page, "current_page": page, "per_page": per_page})
 
@@ -189,11 +206,7 @@ def dashboard():
                         "pending": counts["pending"], "active": counts["active"], "executed": counts["executed"], "cancelled": counts["cancelled"],
                         "today": len(today_items), "today_changes": len(today_items), "recent": [item.to_dict() for item in recent],
                         "largest_increases": [item.to_dict() for item in increases], "largest_reductions": [item.to_dict() for item in reductions]})
-    except Exception as exc:  # noqa: BLE001
-        current = type(exc).__name__
-        message = str(exc)
-        return jsonify({
-            "error": "Falha ao carregar métricas",
-            "type": current,
-            "detail": message[:1200],
-        }), 503
+    except Exception:  # noqa: BLE001
+        from flask import current_app
+        current_app.logger.exception("dashboard_metrics_failed")
+        return jsonify({"error": "Falha ao carregar métricas"}), 503
