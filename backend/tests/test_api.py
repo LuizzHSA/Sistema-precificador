@@ -151,3 +151,31 @@ def test_product_history_details_and_sku_uniqueness(client):
     duplicate = client.post("/api/products", headers=headers, json={"store_id": store["id"], "name": "Duplicado", "sku": "SKU-1", "current_price": 20})
     assert duplicate.status_code == 409
     assert client.get("/api/products/missing/history", headers=headers).status_code == 404
+
+
+def test_registration_creates_persistent_user_and_rejects_weak_password(client):
+    weak = client.post("/api/auth/register", json={"name": "Nova Conta", "email": "nova@example.com", "password": "curta"})
+    assert weak.status_code == 400
+    response = client.post("/api/auth/register", json={"name": "Nova Conta", "email": "NOVA@example.com", "password": "senha-segura-123"})
+    assert response.status_code == 201
+    assert response.json["user"]["email"] == "nova@example.com"
+    assert response.json["access_token"]
+    duplicate = client.post("/api/auth/register", json={"name": "Outra", "email": "nova@example.com", "password": "senha-segura-123"})
+    assert duplicate.status_code == 409
+    headers = {"Authorization": f"Bearer {response.json['access_token']}"}
+    assert client.get("/api/auth/me", headers=headers).json["email"] == "nova@example.com"
+
+
+def test_user_data_is_isolated_between_accounts(client):
+    first = client.post("/api/auth/register", json={"name": "Conta Um", "email": "um@example.com", "password": "senha-segura-123"})
+    second = client.post("/api/auth/register", json={"name": "Conta Dois", "email": "dois@example.com", "password": "senha-segura-123"})
+    headers_one = {"Authorization": f"Bearer {first.json['access_token']}"}
+    headers_two = {"Authorization": f"Bearer {second.json['access_token']}"}
+    created = client.post("/api/stores", headers=headers_one, json={"name": "Loja Privada", "email": "privada@example.com"})
+    assert created.status_code == 201
+    store_id = created.json["data"]["id"]
+    assert len(client.get("/api/stores", headers=headers_one).json) == 1
+    assert client.get("/api/stores", headers=headers_two).json == []
+    assert client.get(f"/api/stores/{store_id}", headers=headers_two).status_code == 404
+    assert client.put(f"/api/stores/{store_id}", headers=headers_two, json={"name": "Invasão"}).status_code == 404
+    assert client.delete(f"/api/stores/{store_id}", headers=headers_two).status_code == 404
