@@ -1,8 +1,13 @@
-
 .venv/
+venv/
+**/venv/
 __pycache__/
-*.pyc
+*.py[cod]
 price_tracker.db
-
+instance/
+.env
+.env.*
+!.env.example
 .coverage
 coverage.xml
+.pytest_cache/
