@@ -10,6 +10,13 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 MIN_PASSWORD_LENGTH = 10
 
 
+def issue_access_token(user):
+    return create_access_token(
+        identity=user.id,
+        additional_claims={"token_version": user.token_version},
+    )
+
+
 def valid_email(email):
     if not email or len(email) > 255 or "@" not in email:
         return False
@@ -63,7 +70,7 @@ def register():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "Já existe uma conta com este e-mail"}), 409
-    token = create_access_token(identity=user.id)
+    token = issue_access_token(user)
     return jsonify({"message": "Conta criada com sucesso", "access_token": token, "token": token, "user": user.to_dict()}), 201
 
 
@@ -103,5 +110,10 @@ def get_me():
 @auth_bp.post("/logout")
 @jwt_required()
 def logout():
-    # The client discards the token; server-side token revocation remains a separate task.
+    user = db.session.get(User, str(get_jwt_identity()))
+    if not user or not user.is_active:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    # Invalidate all previously issued tokens for this account, including the current one.
+    user.token_version += 1
+    db.session.commit()
     return jsonify({"message": "Logout realizado com sucesso"})
