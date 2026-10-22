@@ -210,17 +210,7 @@ def create_app(config_name=None):
             raise error
         return jsonify({"error": "Erro interno do servidor"}), 500
 
-    with app.app_context():
-        from app import models  # noqa: F401
-        # Existing deployment bootstrapping is retained for compatibility for now.
-        database_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-        if database_url and not database_url.startswith("sqlite"):
-            try:
-                db.create_all()
-                app.logger.info("database_schema_ready")
-            except Exception:
-                app.logger.exception("database_schema_initialization_failed")
-
+    # Schema changes are applied explicitly with Flask-Migrate; never mutate production schema on import.
     return app
 
 
