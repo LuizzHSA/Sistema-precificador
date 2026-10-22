@@ -4,7 +4,11 @@ A API usa JSON e autenticação `Bearer JWT` em todas as rotas privadas. `POST /
 
 | Método | Endpoint                     | Descrição                                     |
 | ------ | ---------------------------- | --------------------------------------------- |
-| POST   | `/api/auth/register`       | Cria conta e inicia sessão                               |\n| POST   | `/api/auth/login`          | Autentica uma conta existente                            |\n| GET    | `/api/auth/me`             | Retorna a conta autenticada                              |\n| POST   | `/api/auth/logout`         | Encerra a sessão no cliente                              |\n| GET    | `/health`                    | Liveness sem autenticação                     |
+| POST   | `/api/auth/register`       | Cria conta e inicia sessão                               |
+| POST   | `/api/auth/login`          | Autentica uma conta existente                            |
+| GET    | `/api/auth/me`             | Retorna a conta autenticada                              |
+| POST   | `/api/auth/logout`         | Encerra a sessão no cliente                              |
+| GET    | `/health`                    | Liveness sem autenticação                     |
 | GET    | `/health/ready`              | Readiness e teste de banco                    |
 | GET    | `/metrics`                   | Contadores operacionais                       |
 | GET    | `/api/products/<id>/history` | Detalhes do produto e histórico de alterações |
