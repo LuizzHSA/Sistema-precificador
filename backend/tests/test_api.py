@@ -179,3 +179,24 @@ def test_user_data_is_isolated_between_accounts(client):
     assert client.get(f"/api/stores/{store_id}", headers=headers_two).status_code == 404
     assert client.put(f"/api/stores/{store_id}", headers=headers_two, json={"name": "Invasão"}).status_code == 404
     assert client.delete(f"/api/stores/{store_id}", headers=headers_two).status_code == 404
+
+    product_response = client.post("/api/products", headers=headers_one, json={
+        "store_id": store_id, "name": "Produto Privado", "sku": "PRIV-1", "current_price": 25
+    })
+    assert product_response.status_code == 201
+    product_id = product_response.json["data"]["id"]
+    change_response = client.post("/api/price-changes", headers=headers_one, json={
+        "store_id": store_id, "product_id": product_id, "new_price": 30,
+        "effective_date": (datetime.utcnow() + timedelta(days=1)).isoformat()
+    })
+    assert change_response.status_code == 201
+    change_id = change_response.json["data"]["id"]
+
+    assert client.get("/api/products", headers=headers_two).json == []
+    assert client.get(f"/api/products/{product_id}", headers=headers_two).status_code == 404
+    assert client.get("/api/price-changes", headers=headers_two).json["total"] == 0
+    assert client.get(f"/api/price-changes/{change_id}", headers=headers_two).status_code == 404
+    assert client.get("/api/execution-logs", headers=headers_two).json == []
+    assert client.get("/api/audit-events", headers=headers_two).json == []
+    assert client.get("/api/dashboard", headers=headers_two).json["products"] == 0
+    assert client.get("/metrics", headers=headers_two).json["products_total"] == 0
