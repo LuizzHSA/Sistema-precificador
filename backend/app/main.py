@@ -2,11 +2,14 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
-from flask import Flask, jsonify, request
+
+from flask import Flask, jsonify, request, g
+from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
-from sqlalchemy import text
+from sqlalchemy import text, event
+from sqlalchemy.orm import with_loader_criteria
 from sqlalchemy.exc import IntegrityError
 
 from app.config import config
@@ -14,24 +17,27 @@ from app import db, jwt, migrate
 from app.routes.auth import auth_bp
 from app.routes.price_changes import price_bp
 from app.routes.catalog import catalog_bp
+from app.models import User, Store, Product, PriceChange, ExecutionLog, AuditEvent
 
 load_dotenv()
 
 
 def _production_config_issues(app):
     issues = []
-
-    secret_key = app.config.get("SECRET_KEY") or ""
-    jwt_secret = app.config.get("JWT_SECRET_KEY") or ""
-
-    # Autenticação está temporariamente desativada para acesso direto.
-    # Mantemos apenas a validação da infraestrutura necessária ao sistema.
+    for key in ("SECRET_KEY", "JWT_SECRET_KEY"):
+        value = app.config.get(key)
+        if not value:
+            issues.append(key)
+        elif key in {"SECRET_KEY", "JWT_SECRET_KEY"} and (
+            value in {"dev-secret-key", "jwt-secret-key"} or len(value) < 32
+        ):
+            issues.append(key)
 
     database_url = app.config.get("SQLALCHEMY_DATABASE_URI") or ""
     if not database_url or database_url.startswith("sqlite"):
         issues.append("DATABASE_URL")
 
-    return issues
+    return sorted(set(issues))
 
 
 def create_app(config_name=None):
@@ -51,7 +57,6 @@ def create_app(config_name=None):
             "production_configuration_incomplete missing_or_invalid=%s",
             ",".join(config_issues),
         )
-
     app.config["PRODUCTION_CONFIG_ISSUES"] = config_issues
 
     request_hits = defaultdict(deque)
@@ -60,17 +65,53 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
+    owned_models = (Store, Product, PriceChange, ExecutionLog, AuditEvent)
+
+    @event.listens_for(db.session.session_factory.class_, "before_flush")
+    def assign_record_owner(session, flush_context, instances):
+        owner_id = getattr(g, "current_user_id", None)
+        if owner_id:
+            for obj in session.new:
+                if isinstance(obj, owned_models) and getattr(obj, "owner_id", None) is None:
+                    obj.owner_id = owner_id
+
+    @event.listens_for(db.session.session_factory.class_, "do_orm_execute")
+    def scope_owned_queries(execute_state):
+        owner_id = getattr(g, "current_user_id", None)
+        if owner_id and execute_state.is_select:
+            for model in owned_models:
+                execute_state.statement = execute_state.statement.options(
+                    with_loader_criteria(model, lambda cls: cls.owner_id == owner_id, include_aliases=True)
+                )
+
     @app.before_request
-    def enforce_rate_limit():
-        if request.path in ("/", "/health", "/health/ready"):
+    def enforce_rate_limit_and_auth():
+        public_paths = {"/", "/health", "/health/ready"}
+        if request.path not in public_paths:
+            now = time.monotonic()
+            bucket = request_hits[request.remote_addr or "unknown"]
+            while bucket and now - bucket[0] > app.config["RATE_WINDOW_SECONDS"]:
+                bucket.popleft()
+            if len(bucket) >= app.config["RATE_LIMIT"]:
+                return jsonify({"error": "Limite de requisições excedido"}), 429
+            bucket.append(now)
+
+        # Login is the only public API operation. All business and operational
+        # API routes require a valid JWT; auth endpoints also enforce JWT where needed.
+        if request.path in {"/api/auth/login", "/api/auth/register"} and request.method == "POST":
             return None
-        now = time.monotonic()
-        bucket = request_hits[request.remote_addr or "unknown"]
-        while bucket and now - bucket[0] > app.config["RATE_WINDOW_SECONDS"]:
-            bucket.popleft()
-        if len(bucket) >= app.config["RATE_LIMIT"]:
-            return jsonify({"error": "Limite de requisições excedido"}), 429
-        bucket.append(now)
+        if request.path.startswith("/api/") or request.path == "/metrics":
+            try:
+                verify_jwt_in_request()
+                identity = str(get_jwt_identity())
+                user = db.session.get(User, identity)
+                if not user or not user.is_active:
+                    return jsonify({"error": "Usuário inativo ou inexistente"}), 401
+                if get_jwt().get("token_version") != user.token_version:
+                    return jsonify({"error": "Token revogado; faça login novamente"}), 401
+                g.current_user_id = user.id
+            except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
+                return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         return None
 
     @app.after_request
@@ -124,21 +165,12 @@ def create_app(config_name=None):
                 "configuration": "incomplete",
                 "missing_or_invalid": issues,
             }), 503
-
         try:
             db.session.execute(text("SELECT 1"))
-            return jsonify({
-                "status": "ready",
-                "database": "ok",
-                "configuration": "ok",
-            }), 200
-        except Exception as exc:  # noqa: BLE001
+            return jsonify({"status": "ready", "database": "ok", "configuration": "ok"}), 200
+        except Exception:  # noqa: BLE001
             app.logger.exception("readiness_check_failed")
-            return jsonify({
-                "status": "not_ready",
-                "database": "error",
-                "error": str(exc),
-            }), 503
+            return jsonify({"status": "not_ready", "database": "error"}), 503
 
     @app.get("/metrics")
     def metrics():
@@ -175,30 +207,12 @@ def create_app(config_name=None):
             db.session.rollback()
         except Exception:
             app.logger.exception("database_rollback_failed")
-
         app.logger.exception("unhandled_application_error")
-
         if app.config.get("TESTING"):
             raise error
+        return jsonify({"error": "Erro interno do servidor"}), 500
 
-        return jsonify({
-            "error": "Erro interno do servidor",
-            "type": type(error).__name__,
-        }), 500
-
-    with app.app_context():
-        from app import models  # noqa: F401
-
-        # Na Vercel/produção, garante que um PostgreSQL novo tenha o schema
-        # mínimo necessário para o sistema funcionar imediatamente.
-        database_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-        if database_url and not database_url.startswith("sqlite"):
-            try:
-                db.create_all()
-                app.logger.info("database_schema_ready")
-            except Exception:
-                app.logger.exception("database_schema_initialization_failed")
-
+    # Schema changes are applied explicitly with Flask-Migrate; never mutate production schema on import.
     return app
 
 

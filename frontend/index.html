@@ -3,45 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>Sistema de Precificação</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/components.css" />
+    <style>
+      #authScreen { min-height: 100vh; align-items: center; justify-content: center; padding: 24px 0; background: #f5f7fb; }
+      #authScreen .card { box-shadow: 0 12px 36px rgba(15, 23, 42, .08); }
+      #authScreen input { width: 100%; box-sizing: border-box; }
+    </style>
   </head>
   <body>
-    <div id="app">
+    <div id="authScreen" style="display:none" aria-live="polite"></div>
+    <div id="app" style="display:none">
       <aside class="sidebar">
         <div class="sidebar-header">
           <h1 class="logo">Sistema Precificador</h1>
-          <button class="menu-toggle" id="menuToggle">☰</button>
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">☰</button>
         </div>
         <nav class="sidebar-nav">
-          <a href="#/dashboard" class="nav-link active" data-page="dashboard">
-            Dashboard
-          </a>
-          <a href="#/price-changes" class="nav-link" data-page="price-changes"
-            >Alterações de Preço</a
-          >
-          <a href="#/products" class="nav-link" data-page="products"
-            >Produtos</a
-          >
+          <a href="#/dashboard" class="nav-link active" data-page="dashboard">Dashboard</a>
+          <a href="#/price-changes" class="nav-link" data-page="price-changes">Alterações de Preço</a>
+          <a href="#/products" class="nav-link" data-page="products">Produtos</a>
           <a href="#/stores" class="nav-link" data-page="stores">Lojas</a>
           <hr />
-          <a href="#/settings" class="nav-link" data-page="settings"
-            >Configurações</a
-          >
-          <a href="#" id="logoutBtn" class="nav-link nav-link--danger"
-            >Logout</a
-          >
+          <a href="#/settings" class="nav-link" data-page="settings">Configurações</a>
+          <a href="#" id="logoutBtn" class="nav-link nav-link--danger">Sair</a>
         </nav>
       </aside>
       <div class="main-wrapper">
         <header class="header">
           <div class="header-left"><h2 id="pageTitle">Dashboard</h2></div>
-          <div class="header-right">
-            <div class="user-menu">
-              <span id="userName">Usuário</span>
-            </div>
-          </div>
+          <div class="header-right"><div class="user-menu"><span id="userName">Usuário</span></div></div>
         </header>
         <main class="content" id="content"></main>
       </div>

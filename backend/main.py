@@ -2,12 +2,14 @@
 """Entrypoint WSGI do Sistema Precificador para Vercel."""
 
 import json
+import logging
 import os
 import sys
 import traceback
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
+logger = logging.getLogger(__name__)
 BOOT_ERROR = None
 FLASK_APP = None
 
@@ -18,6 +20,7 @@ try:
     from app.main import create_app
     FLASK_APP = create_app()
 except Exception as exc:  # noqa: BLE001
+    logger.exception("price_tracker_application_boot_failed")
     BOOT_ERROR = {
         "type": type(exc).__name__,
         "message": str(exc),
@@ -30,13 +33,12 @@ def app(environ, start_response):
     if FLASK_APP is not None:
         return FLASK_APP(environ, start_response)
 
+    # Detailed diagnostics are kept in server logs, never exposed to clients.
     payload = json.dumps(
         {
             "status": "boot_failed",
             "service": "price-tracker",
-            "error_type": BOOT_ERROR["type"] if BOOT_ERROR else "UnknownError",
-            "error": BOOT_ERROR["message"] if BOOT_ERROR else "Falha desconhecida ao iniciar o Flask",
-            "traceback": BOOT_ERROR["traceback"] if BOOT_ERROR else "",
+            "error": "Falha ao iniciar a API. Consulte os logs do servidor.",
         },
         ensure_ascii=False,
     ).encode("utf-8")

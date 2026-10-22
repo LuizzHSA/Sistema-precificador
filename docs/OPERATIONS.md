@@ -14,6 +14,18 @@ Alterações com status `active` e `effective_date` vencida são executadas uma 
 
 Sem `SMTP_HOST`, a aplicação não envia email: registra a notificação como dry-run. Para ativar envio, configure `NOTIFICATION_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` e `SMTP_TLS`. O template padrão inclui produto, loja, status e valores da alteração.
 
+## Contas, tokens e migrações do banco
+
+O schema de contas e isolamento de dados está nas migrations `0002_user_accounts`, `0003_user_token_version` e `0004_tenant_store_email`. A migration `0003` adiciona a versão do token usada para invalidar sessões no logout. A migration `0004` permite que contas diferentes cadastrem lojas com o mesmo e-mail, mantendo a unicidade dentro de cada conta. O logout invalida todos os tokens existentes daquela conta; o usuário precisa entrar novamente.
+
+Antes de publicar esta versão em um banco existente, faça backup e aplique as migrations a partir da pasta `backend`, com o ambiente e `DATABASE_URL` configurados:
+
+```bash
+flask --app 'app.main:create_app' db upgrade
+```
+
+O login administrativo legado pode continuar usando `AUTH_EMAIL` e `AUTH_PASSWORD_HASH`; os novos cadastros são persistidos na tabela `users`. No primeiro login do administrador legado, os registros antigos sem `owner_id` são associados a essa conta. Não habilite tráfego da nova versão antes de aplicar as migrations.
+
 ## Backup e restauração
 
 O script `scripts/backup.sh` suporta SQLite e PostgreSQL:

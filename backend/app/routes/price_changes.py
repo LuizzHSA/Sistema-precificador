@@ -1,5 +1,6 @@
+import math
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request
 from sqlalchemy import or_
 from app import db
@@ -18,7 +19,10 @@ def _date(value):
     if not value:
         return None
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed
     except ValueError:
         return None
 
@@ -26,9 +30,24 @@ def _date(value):
 def _price(value):
     try:
         result = float(value)
-        return result if result > 0 else None
+        return result if math.isfinite(result) and result > 0 else None
     except (TypeError, ValueError):
         return None
+
+
+def _pagination_value(name, default, minimum, maximum=None):
+    raw = request.args.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if value < minimum:
+        return None
+    if maximum is not None:
+        value = min(value, maximum)
+    return value
 
 
 @price_bp.get("/price-changes")
@@ -49,8 +68,10 @@ def list_price_changes():
         end = _date(request.args["to"])
         if end:
             query = query.filter(PriceChange.effective_date <= end)
-    page = max(int(request.args.get("page", 1)), 1)
-    per_page = min(max(int(request.args.get("per_page", 20)), 1), 100)
+    page = _pagination_value("page", 1, 1)
+    per_page = _pagination_value("per_page", 20, 1, 100)
+    if page is None or per_page is None:
+        return jsonify({"error": "Parâmetros de paginação inválidos"}), 400
     pagination = query.order_by(PriceChange.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return jsonify({"data": [item.to_dict() for item in pagination.items], "items": [item.to_dict() for item in pagination.items], "total": pagination.total, "pages": pagination.pages, "page": page, "current_page": page, "per_page": per_page})
 
@@ -81,7 +102,10 @@ def create_price_change():
         return jsonify({"error": "Novo preço deve ser maior que zero"}), 400
     if effective_date is None:
         return jsonify({"error": "Data efetiva inválida"}), 400
-    item = PriceChange(id=str(uuid.uuid4()), store_id=store.id, product_id=product.id, current_price=float(product.current_price), new_price=new_price, effective_date=effective_date, reason=data.get("reason", ""), status="pending")
+    reason = str(data.get("reason") or "").strip()
+    if len(reason) > 500:
+        return jsonify({"error": "Motivo deve ter até 500 caracteres"}), 400
+    item = PriceChange(id=str(uuid.uuid4()), store_id=store.id, product_id=product.id, current_price=float(product.current_price), new_price=new_price, effective_date=effective_date, reason=reason, status="pending")
     db.session.add(item)
     record_audit("price_change.created", "price_change", item.id, {"new_price": new_price, "product_id": product.id})
     db.session.commit()
@@ -107,7 +131,10 @@ def update_price_change(price_change_id):
             return jsonify({"error": "Data efetiva inválida"}), 400
         item.effective_date = date
     if "reason" in data:
-        item.reason = data["reason"]
+        reason = str(data["reason"] or "").strip()
+        if len(reason) > 500:
+            return jsonify({"error": "Motivo deve ter até 500 caracteres"}), 400
+        item.reason = reason
     record_audit("price_change.updated", "price_change", item.id, {"status": item.status})
     db.session.commit()
     return jsonify({"message": "Alteração de preço atualizada com sucesso", "data": item.to_dict()})
@@ -189,11 +216,7 @@ def dashboard():
                         "pending": counts["pending"], "active": counts["active"], "executed": counts["executed"], "cancelled": counts["cancelled"],
                         "today": len(today_items), "today_changes": len(today_items), "recent": [item.to_dict() for item in recent],
                         "largest_increases": [item.to_dict() for item in increases], "largest_reductions": [item.to_dict() for item in reductions]})
-    except Exception as exc:  # noqa: BLE001
-        current = type(exc).__name__
-        message = str(exc)
-        return jsonify({
-            "error": "Falha ao carregar métricas",
-            "type": current,
-            "detail": message[:1200],
-        }), 503
+    except Exception:  # noqa: BLE001
+        from flask import current_app
+        current_app.logger.exception("dashboard_metrics_failed")
+        return jsonify({"error": "Falha ao carregar métricas"}), 503

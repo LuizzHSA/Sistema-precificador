@@ -3,14 +3,32 @@ from app import db
 from .automation import ExecutionLog, AuditEvent
 
 
-class Store(db.Model):
-    __tablename__ = "stores"
+class User(db.Model):
+    __tablename__ = "users"
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(255), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    token_version = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "email": self.email}
+
+
+class Store(db.Model):
+    __tablename__ = "stores"
+    __table_args__ = (db.UniqueConstraint("owner_id", "email", name="uq_store_owner_email"),)
+    id = db.Column(db.String(36), primary_key=True)
+    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
     phone = db.Column(db.String(40))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    owner = db.relationship("User")
     products = db.relationship("Product", back_populates="store", cascade="all, delete-orphan")
     price_changes = db.relationship("PriceChange", back_populates="store")
 
@@ -24,6 +42,7 @@ class Product(db.Model):
     __tablename__ = "products"
     __table_args__ = (db.UniqueConstraint("store_id", "sku", name="uq_product_store_sku"),)
     id = db.Column(db.String(36), primary_key=True)
+    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
     store_id = db.Column(db.String(36), db.ForeignKey("stores.id"), nullable=False, index=True)
     name = db.Column(db.String(160), nullable=False)
     sku = db.Column(db.String(80), nullable=False, index=True)
@@ -44,6 +63,7 @@ class PriceChange(db.Model):
     __tablename__ = "price_changes"
     VALID_STATUSES = {"pending", "active", "executed", "cancelled"}
     id = db.Column(db.String(36), primary_key=True)
+    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
     store_id = db.Column(db.String(36), db.ForeignKey("stores.id"), nullable=False, index=True)
     product_id = db.Column(db.String(36), db.ForeignKey("products.id"), nullable=False, index=True)
     current_price = db.Column(db.Float, nullable=False)

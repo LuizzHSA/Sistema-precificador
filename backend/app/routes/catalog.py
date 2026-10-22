@@ -1,3 +1,4 @@
+import math
 import re
 import uuid
 from flask import Blueprint, jsonify, request
@@ -24,8 +25,25 @@ def create_store():
     data = _json(); error = _validate_common(data, ["name", "email"])
     if error: return jsonify({"error": error}), 400
     if not EMAIL_RE.match(str(data["email"])): return jsonify({"error": "Email inválido"}), 400
-    store = Store(id=str(uuid.uuid4()), name=str(data["name"]).strip(), email=str(data["email"]).strip().lower(), phone=data.get("phone"))
-    db.session.add(store); db.session.commit(); return jsonify({"data": store.to_dict()}), 201
+    name = str(data["name"]).strip()
+    email = str(data["email"]).strip().lower()
+    phone = str(data.get("phone") or "").strip() or None
+    if not name or len(name) > 120:
+        return jsonify({"error": "Nome da loja deve ter entre 1 e 120 caracteres"}), 400
+    if len(email) > 255:
+        return jsonify({"error": "Email deve ter até 255 caracteres"}), 400
+    if phone and len(phone) > 40:
+        return jsonify({"error": "Telefone deve ter até 40 caracteres"}), 400
+    store = Store(id=str(uuid.uuid4()), name=name, email=email, phone=phone)
+    db.session.add(store)
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+            return jsonify({"error": "Já existe uma loja com este email"}), 409
+        raise
+    return jsonify({"data": store.to_dict()}), 201
 
 @catalog_bp.get("/stores/<store_id>")
 def get_store(store_id):
@@ -36,11 +54,28 @@ def update_store(store_id):
     store = db.session.get(Store, store_id)
     if not store: return jsonify({"error": "Loja não encontrada"}), 404
     data = _json()
-    if "name" in data and not str(data["name"]).strip(): return jsonify({"error": "Nome é obrigatório"}), 400
-    if "email" in data and not EMAIL_RE.match(str(data["email"])): return jsonify({"error": "Email inválido"}), 400
+    if "name" in data and (not str(data["name"]).strip() or len(str(data["name"]).strip()) > 120):
+        return jsonify({"error": "Nome deve ter entre 1 e 120 caracteres"}), 400
+    if "email" in data and (not EMAIL_RE.match(str(data["email"]).strip()) or len(str(data["email"]).strip()) > 255):
+        return jsonify({"error": "Email inválido"}), 400
+    if "phone" in data and len(str(data["phone"] or "").strip()) > 40:
+        return jsonify({"error": "Telefone deve ter até 40 caracteres"}), 400
     for field in ("name", "email", "phone"):
-        if field in data: setattr(store, field, str(data[field]).strip().lower() if field == "email" else data[field])
-    db.session.commit(); return jsonify({"data": store.to_dict()})
+        if field in data:
+            value = str(data[field] or "").strip()
+            if field == "email":
+                value = value.lower()
+            elif field == "phone":
+                value = value or None
+            setattr(store, field, value)
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+            return jsonify({"error": "Já existe uma loja com este email"}), 409
+        raise
+    return jsonify({"data": store.to_dict()})
 
 @catalog_bp.delete("/stores/<store_id>")
 def delete_store(store_id):
@@ -64,8 +99,12 @@ def create_product():
     if not store: return jsonify({"error": "Loja não encontrada"}), 404
     try: price = float(data["current_price"])
     except (TypeError, ValueError): return jsonify({"error": "Preço inválido"}), 400
+    if not math.isfinite(price): return jsonify({"error": "Preço deve ser um número finito"}), 400
     if price <= 0: return jsonify({"error": "Preço deve ser maior que zero"}), 400
-    product = Product(id=str(uuid.uuid4()), store_id=store.id, name=str(data["name"]).strip(), sku=str(data["sku"]).strip(), current_price=price)
+    name, sku = str(data["name"]).strip(), str(data["sku"]).strip()
+    if not name or len(name) > 160: return jsonify({"error": "Nome do produto deve ter entre 1 e 160 caracteres"}), 400
+    if not sku or len(sku) > 80: return jsonify({"error": "SKU deve ter entre 1 e 80 caracteres"}), 400
+    product = Product(id=str(uuid.uuid4()), store_id=store.id, name=name, sku=sku, current_price=price)
     db.session.add(product); db.session.commit(); return jsonify({"data": product.to_dict()}), 201
 
 @catalog_bp.get("/products/<product_id>")
@@ -88,12 +127,24 @@ def update_product(product_id):
     if "current_price" in data:
         try: price = float(data["current_price"])
         except (TypeError, ValueError): return jsonify({"error": "Preço inválido"}), 400
+        if not math.isfinite(price): return jsonify({"error": "Preço deve ser um número finito"}), 400
         if price <= 0: return jsonify({"error": "Preço deve ser maior que zero"}), 400
         product.current_price = price
-    for field in ("name", "sku"):
-        if field in data and not str(data[field]).strip(): return jsonify({"error": f"{field} é obrigatório"}), 400
-        if field in data: setattr(product, field, str(data[field]).strip())
-    db.session.commit(); return jsonify({"data": product.to_dict()})
+    limits = {"name": 160, "sku": 80}
+    for field, maximum in limits.items():
+        if field in data:
+            value = str(data[field] or "").strip()
+            if not value or len(value) > maximum:
+                return jsonify({"error": f"{field} deve ter entre 1 e {maximum} caracteres"}), 400
+            setattr(product, field, value)
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+            return jsonify({"error": "Já existe um produto com este SKU nesta loja"}), 409
+        raise
+    return jsonify({"data": product.to_dict()})
 
 @catalog_bp.delete("/products/<product_id>")
 def delete_product(product_id):
