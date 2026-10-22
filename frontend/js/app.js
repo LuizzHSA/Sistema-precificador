@@ -41,25 +41,32 @@ const app = {
     });
   },
 
-  showLogin(message = '') {
+  showLogin(message = '', mode = 'login') {
     const screen = document.getElementById('authScreen');
     const application = document.getElementById('app');
     if (application) application.style.display = 'none';
     if (!screen) return;
+    const registering = mode === 'register';
     screen.style.display = 'flex';
     screen.innerHTML = `
       <section class="card" style="width:min(420px,calc(100% - 32px));margin:auto">
-        <div class="card-header"><h2>Entrar no Sistema Precificador</h2></div>
+        <div class="card-header"><h2>${registering ? 'Criar sua conta' : 'Entrar no Sistema Precificador'}</h2></div>
         <div class="card-body">
-          <p>Informe suas credenciais para continuar.</p>
-          <p id="authError" role="alert" style="color:#b42318">${message}</p>
+          <p>${registering ? 'Crie sua conta para começar a organizar seus preços.' : 'Informe suas credenciais para continuar.'}</p>
+          <p id="authError" role="alert" style="color:#b42318"></p>
           <form id="loginForm">
-            <div class="form-group"><label for="loginEmail">E-mail</label><input class="form-input" id="loginEmail" name="email" type="email" autocomplete="username" required></div>
-            <div class="form-group"><label for="loginPassword">Senha</label><input class="form-input" id="loginPassword" name="password" type="password" autocomplete="current-password" required></div>
-            <button class="btn btn--primary" id="loginSubmit" type="submit" style="width:100%">Entrar</button>
+            ${registering ? '<div class="form-group"><label for="loginName">Nome</label><input class="form-input" id="loginName" name="name" type="text" maxlength="120" autocomplete="name" required></div>' : ''}
+            <div class="form-group"><label for="loginEmail">E-mail</label><input class="form-input" id="loginEmail" name="email" type="email" maxlength="255" autocomplete="username" required></div>
+            <div class="form-group"><label for="loginPassword">Senha</label><input class="form-input" id="loginPassword" name="password" type="password" minlength="${registering ? '10' : '1'}" autocomplete="${registering ? 'new-password' : 'current-password'}" required></div>
+            <button class="btn btn--primary" id="loginSubmit" type="submit" style="width:100%">${registering ? 'Criar conta' : 'Entrar'}</button>
           </form>
+          <p style="margin-top:16px;text-align:center">
+            <button id="authSwitch" type="button" class="btn">${registering ? 'Já tenho uma conta' : 'Criar uma conta'}</button>
+          </p>
         </div>
       </section>`;
+    document.getElementById('authError').textContent = message;
+    document.getElementById('authSwitch').addEventListener('click', () => this.showLogin('', registering ? 'login' : 'register'));
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       if (this.authenticating) return;
@@ -67,20 +74,24 @@ const app = {
       const button = document.getElementById('loginSubmit');
       const error = document.getElementById('authError');
       button.disabled = true;
-      button.textContent = 'Entrando...';
+      button.textContent = registering ? 'Criando conta...' : 'Entrando...';
       error.textContent = '';
       try {
         const form = new FormData(event.currentTarget);
-        const user = await api.login(String(form.get('email') || '').trim(), String(form.get('password') || ''));
+        const email = String(form.get('email') || '').trim();
+        const password = String(form.get('password') || '');
+        const user = registering
+          ? await api.register(String(form.get('name') || '').trim(), email, password)
+          : await api.login(email, password);
         this.showApplication(user);
         await this.navigate(this.getCurrentRoute());
       } catch (err) {
-        error.textContent = err.message || 'Não foi possível entrar. Verifique suas credenciais.';
+        error.textContent = err.message || (registering ? 'Não foi possível criar sua conta.' : 'Não foi possível entrar. Verifique suas credenciais.');
       } finally {
         this.authenticating = false;
         if (button.isConnected) {
           button.disabled = false;
-          button.textContent = 'Entrar';
+          button.textContent = registering ? 'Criar conta' : 'Entrar';
         }
       }
     });
