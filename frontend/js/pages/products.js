@@ -17,7 +17,7 @@ const ProductsPage = {
         catch (error) { showToast(error.message, 'error'); }
       });
       document.getElementById('newProduct').onclick = () => this.form(null, stores);
-    } catch (error) { content.innerHTML = `<div class="card"><div class="card-body">${error.message}</div></div>`; }
+    } catch (error) { content.innerHTML = `<div class="card"><div class="card-body">${escapeHtml(error.message)}</div></div>`; }
   },
   async delete(productId) {
     if (!confirm('Excluir este produto? O histórico também será removido.')) return;
@@ -31,7 +31,7 @@ const ProductsPage = {
     try {
       const result = await api.getProductHistory(productId);
       const changes = result.data || [], product = result.product, box = document.getElementById('productForm');
-      box.innerHTML = `<div class="card margin-top"><div class="card-header"><h4>${escapeHtml(product.name)}</h4><button id="closeProductDetails" class="btn">Fechar</button></div><div class="card-body"><p><strong>SKU:</strong> ${escapeHtml(product.sku)} | <strong>Loja:</strong> ${escapeHtml(product.store || '-')} | <strong>Preço atual:</strong> R$ ${Number(product.current_price).toFixed(2)}</p><h5>Histórico de preços</h5>${changes.length ? `<table><thead><tr><th>Data</th><th>Anterior</th><th>Novo</th><th>Status</th><th>Variação</th></tr></thead><tbody>${changes.map(item => `<tr><td>${new Date(item.created_at).toLocaleString('pt-BR')}</td><td>R$ ${Number(item.current_price).toFixed(2)}</td><td>R$ ${Number(item.new_price).toFixed(2)}</td><td>${item.status}</td><td>${item.percentage_change}%</td></tr>`).join('')}</tbody></table>` : '<p>Nenhuma alteração registrada.</p>'}</div></div>`;
+      box.innerHTML = `<div class="card margin-top"><div class="card-header"><h4>${escapeHtml(product.name)}</h4><button id="closeProductDetails" class="btn">Fechar</button></div><div class="card-body"><p><strong>SKU:</strong> ${escapeHtml(product.sku)} | <strong>Loja:</strong> ${escapeHtml(product.store || '-')} | <strong>Preço atual:</strong> R$ ${Number(product.current_price).toFixed(2)}</p><h5>Histórico de preços</h5>${changes.length ? `<table><thead><tr><th>Data</th><th>Anterior</th><th>Novo</th><th>Status</th><th>Variação</th></tr></thead><tbody>${changes.map(item => `<tr><td>${new Date(item.created_at).toLocaleString('pt-BR')}</td><td>R$ ${Number(item.current_price).toFixed(2)}</td><td>R$ ${Number(item.new_price).toFixed(2)}</td><td>${escapeHtml(item.status)}</td><td>${item.percentage_change}%</td></tr>`).join('')}</tbody></table>` : '<p>Nenhuma alteração registrada.</p>'}</div></div>`;
       document.getElementById('closeProductDetails').onclick = () => { box.innerHTML = ''; };
     } catch (error) { showToast(error.message, 'error'); }
   },
