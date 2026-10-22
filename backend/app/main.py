@@ -4,7 +4,7 @@ import time
 from collections import defaultdict, deque
 
 from flask import Flask, jsonify, request, g
-from flask_jwt_extended import verify_jwt_in_request
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -23,7 +23,7 @@ load_dotenv()
 
 def _production_config_issues(app):
     issues = []
-    for key in ("SECRET_KEY", "JWT_SECRET_KEY", "AUTH_EMAIL", "AUTH_PASSWORD_HASH"):
+    for key in ("SECRET_KEY", "JWT_SECRET_KEY"):
         value = app.config.get(key)
         if not value:
             issues.append(key)
@@ -99,19 +99,14 @@ def create_app(config_name=None):
         # API routes require a valid JWT; auth endpoints also enforce JWT where needed.
         if request.path in {"/api/auth/login", "/api/auth/register"} and request.method == "POST":
             return None
-        if request.path.startswith("/api/"):
+        if request.path.startswith("/api/") or request.path == "/metrics":
             try:
                 verify_jwt_in_request()
-                identity = str(__import__("flask_jwt_extended").get_jwt_identity())
+                identity = str(get_jwt_identity())
                 user = db.session.get(User, identity)
                 if not user or not user.is_active:
                     return jsonify({"error": "Usuário inativo ou inexistente"}), 401
                 g.current_user_id = user.id
-            except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
-                return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
-        if request.path == "/metrics":
-            try:
-                verify_jwt_in_request()
             except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
                 return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         return None
