@@ -13,8 +13,10 @@ MIN_PASSWORD_LENGTH = 10
 def valid_email(email):
     if not email or len(email) > 255 or "@" not in email:
         return False
-    local, separator, domain = email.partition("@")
-    return bool(separator and local and "." in domain and not domain.startswith(".") and not domain.endswith("."))
+    if email.count("@") != 1:
+        return False
+    local, domain = email.split("@", 1)
+    return bool(local and domain and "." in domain and not domain.startswith(".") and not domain.endswith("."))
 
 
 def provision_configured_admin():
@@ -46,6 +48,9 @@ def register():
         return jsonify({"error": "Informe um nome válido (até 120 caracteres)"}), 400
     if not valid_email(email):
         return jsonify({"error": "E-mail inválido"}), 400
+    configured_admin = str(current_app.config.get("AUTH_EMAIL") or "").strip().lower()
+    if email == configured_admin:
+        return jsonify({"error": "Este e-mail é reservado para a conta administrativa configurada"}), 409
     if len(password) < MIN_PASSWORD_LENGTH:
         return jsonify({"error": "A senha deve ter pelo menos 10 caracteres"}), 400
     if User.query.filter_by(email=email).first():
