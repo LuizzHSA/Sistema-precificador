@@ -5,8 +5,6 @@ from collections import defaultdict, deque
 
 from flask import Flask, jsonify, request
 from flask_jwt_extended import verify_jwt_in_request
-from flask_jwt_extended.exceptions import NoAuthorizationError, InvalidHeaderError
-from jwt import ExpiredSignatureError, InvalidTokenError
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -84,12 +82,12 @@ def create_app(config_name=None):
         if request.path.startswith("/api/"):
             try:
                 verify_jwt_in_request()
-            except (NoAuthorizationError, InvalidHeaderError, ExpiredSignatureError, InvalidTokenError):
+            except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
                 return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         if request.path == "/metrics":
             try:
                 verify_jwt_in_request()
-            except (NoAuthorizationError, InvalidHeaderError, ExpiredSignatureError, InvalidTokenError):
+            except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
                 return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
         return None
 
