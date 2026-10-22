@@ -20,10 +20,11 @@ class User(db.Model):
 
 class Store(db.Model):
     __tablename__ = "stores"
+    __table_args__ = (db.UniqueConstraint("owner_id", "email", name="uq_store_owner_email"),)
     id = db.Column(db.String(36), primary_key=True)
     owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(255), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False)
     phone = db.Column(db.String(40))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
