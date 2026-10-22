@@ -40,7 +40,11 @@ def process_due_price_changes(max_retries=3):
         except Exception as exc:  # noqa: BLE001
             db.session.rollback()
             item.retry_count = (item.retry_count or 0) + 1
-            db.session.add(ExecutionLog(price_change_id=item.id, status="failed", message=str(exc)))
+            db.session.add(ExecutionLog(
+                price_change_id=item.id,
+                status="failed",
+                message="Falha na execução automática; consulte os logs do servidor.",
+            ))
             db.session.commit()
             logger.exception("price_change_execution_failed", extra={"price_change_id": item.id})
             results["failed"] += 1
