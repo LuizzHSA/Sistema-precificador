@@ -26,15 +26,20 @@ def upgrade():
     )
     op.create_index("ix_users_email", "users", ["email"], unique=True)
 
+    bind = op.get_bind()
     for table in ("stores", "products", "price_changes", "execution_logs", "audit_events"):
-        op.add_column(table, sa.Column("owner_id", sa.String(length=36), nullable=True))
-        op.create_foreign_key(
-            f"fk_{table}_owner_id_users",
-            table,
-            "users",
-            ["owner_id"],
-            ["id"],
-        )
+        if bind.dialect.name == "sqlite":
+            # SQLite needs a batch table rebuild to add a foreign-key constraint.
+            with op.batch_alter_table(table, recreate="always") as batch:
+                batch.add_column(sa.Column("owner_id", sa.String(length=36), nullable=True))
+                batch.create_foreign_key(
+                    f"fk_{table}_owner_id_users", "users", ["owner_id"], ["id"]
+                )
+        else:
+            op.add_column(table, sa.Column("owner_id", sa.String(length=36), nullable=True))
+            op.create_foreign_key(
+                f"fk_{table}_owner_id_users", table, "users", ["owner_id"], ["id"]
+            )
         op.create_index(f"ix_{table}_owner_id", table, ["owner_id"])
 
 
