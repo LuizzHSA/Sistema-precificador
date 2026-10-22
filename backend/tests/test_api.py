@@ -20,6 +20,7 @@ def client():
 
 def auth(client):
     response = client.post("/api/auth/login", json={"email": "admin@pricetracker.com", "password": "admin123"})
+    assert response.status_code == 200
     return {"Authorization": f"Bearer {response.json['token']}"}
 
 
@@ -37,6 +38,19 @@ def test_health_and_auth(client):
     headers = auth(client)
     assert client.get("/api/auth/me", headers=headers).status_code == 200
     assert client.post("/api/auth/logout", headers=headers).status_code == 200
+
+
+def test_all_business_and_metrics_routes_require_authentication(client):
+    for path in (
+        "/api/stores", "/api/products", "/api/price-changes",
+        "/api/dashboard", "/api/execution-logs", "/api/audit-events", "/metrics",
+    ):
+        response = client.get(path)
+        assert response.status_code == 401, f"{path} unexpectedly allowed unauthenticated access"
+    assert client.post("/api/stores", json={"name": "Loja", "email": "loja@example.com"}).status_code == 401
+    assert client.post("/api/automation/run").status_code == 401
+    assert client.get("/health").status_code == 200
+    assert client.get("/health/ready").status_code == 200
 
 
 def test_catalog_crud_and_validation(client):
@@ -118,8 +132,9 @@ def test_automation_executes_due_active_change_and_audits(client):
 
 
 def test_operational_endpoints_and_security_headers(client):
+    headers = auth(client)
     assert client.get("/health/ready").status_code == 200
-    metrics = client.get("/metrics")
+    metrics = client.get("/metrics", headers=headers)
     assert metrics.status_code == 200
     assert "stores_total" in metrics.json
     assert client.get("/health").headers["X-Content-Type-Options"] == "nosniff"
