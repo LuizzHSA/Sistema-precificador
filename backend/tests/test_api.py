@@ -266,3 +266,26 @@ def test_price_change_rejects_non_finite_prices_and_long_reason(client):
         "effective_date": datetime.utcnow().isoformat(), "reason": "x" * 501,
     })
     assert response.status_code == 400
+
+
+
+def test_store_email_can_be_reused_by_different_accounts(client):
+    first = client.post("/api/auth/register", json={
+        "name": "Conta A", "email": "conta-a@example.com", "password": "senha-segura-123"
+    })
+    second = client.post("/api/auth/register", json={
+        "name": "Conta B", "email": "conta-b@example.com", "password": "senha-segura-123"
+    })
+    headers_a = {"Authorization": f"Bearer {first.json['access_token']}"}
+    headers_b = {"Authorization": f"Bearer {second.json['access_token']}"}
+    payload = {"name": "Loja Compartilhada", "email": "loja@example.com"}
+    assert client.post("/api/stores", headers=headers_a, json=payload).status_code == 201
+    assert client.post("/api/stores", headers=headers_b, json=payload).status_code == 201
+
+
+def test_product_update_rejects_overlong_fields(client):
+    headers, _, product = catalog(client)
+    response = client.put(f"/api/products/{product['id']}", headers=headers, json={"name": "P" * 161})
+    assert response.status_code == 400
+    response = client.put(f"/api/products/{product['id']}", headers=headers, json={"sku": "S" * 81})
+    assert response.status_code == 400
