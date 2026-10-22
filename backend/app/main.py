@@ -8,7 +8,8 @@ from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
-from sqlalchemy import text, event, with_loader_criteria
+from sqlalchemy import text, event
+from sqlalchemy.orm import with_loader_criteria
 from sqlalchemy.exc import IntegrityError
 
 from app.config import config
