@@ -13,50 +13,34 @@ def login():
         if item in {"SECRET_KEY", "JWT_SECRET_KEY", "AUTH_EMAIL", "AUTH_PASSWORD_HASH"}
     ]
     if auth_issues:
-        return jsonify({
-            "error": "Configuração de autenticação incompleta",
-            "missing_or_invalid": auth_issues,
-        }), 503
+        return jsonify({"error": "Configuração de autenticação incompleta"}), 503
 
     data = request.get_json(silent=True) or {}
     email = str(data.get("email") or "").strip().lower()
     password = str(data.get("password") or "")
-
     if not email or not password:
         return jsonify({"error": "Email e senha são obrigatórios"}), 400
 
     configured_email = str(current_app.config.get("AUTH_EMAIL") or "").strip().lower()
     password_hash = current_app.config.get("AUTH_PASSWORD_HASH")
+    if not configured_email or not password_hash:
+        return jsonify({"error": "Autenticação não configurada"}), 503
 
     try:
         password_ok = check_password_hash(password_hash, password)
-    except Exception as exc:  # noqa: BLE001
-        current_app.logger.exception("invalid_auth_password_hash")
-        return jsonify({
-            "error": "AUTH_PASSWORD_HASH inválido",
-            "detail": type(exc).__name__,
-        }), 503
+    except (ValueError, TypeError):
+        current_app.logger.error("AUTH_PASSWORD_HASH has an unsupported format")
+        return jsonify({"error": "Configuração de autenticação inválida"}), 503
 
     if email != configured_email or not password_ok:
         return jsonify({"error": "Email ou senha inválidos"}), 401
 
-    try:
-        token = create_access_token(identity=email)
-    except Exception as exc:  # noqa: BLE001
-        current_app.logger.exception("jwt_token_creation_failed")
-        return jsonify({
-            "error": "Falha ao gerar token de autenticação",
-            "detail": type(exc).__name__,
-        }), 503
-
+    token = create_access_token(identity=email)
     return jsonify({
         "message": "Login realizado com sucesso",
         "token": token,
         "access_token": token,
-        "user": {
-            "email": email,
-            "name": current_app.config.get("AUTH_NAME", "Administrador"),
-        },
+        "user": {"email": email, "name": current_app.config.get("AUTH_NAME", "Administrador")},
     }), 200
 
 
@@ -73,4 +57,5 @@ def get_me():
 @auth_bp.post("/logout")
 @jwt_required()
 def logout():
+    # JWT access tokens are stateless. The client must discard its token.
     return jsonify({"message": "Logout realizado com sucesso"})
