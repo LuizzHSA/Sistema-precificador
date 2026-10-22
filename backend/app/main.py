@@ -4,7 +4,7 @@ import time
 from collections import defaultdict, deque
 
 from flask import Flask, jsonify, request, g
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -107,6 +107,8 @@ def create_app(config_name=None):
                 user = db.session.get(User, identity)
                 if not user or not user.is_active:
                     return jsonify({"error": "Usuário inativo ou inexistente"}), 401
+                if get_jwt().get("token_version") != user.token_version:
+                    return jsonify({"error": "Token revogado; faça login novamente"}), 401
                 g.current_user_id = user.id
             except Exception:  # JWT libraries expose different exception subclasses for malformed tokens
                 return jsonify({"error": "Autenticação necessária ou token inválido"}), 401
