@@ -51,7 +51,7 @@ class APIClient {
       json = { error: text || 'Resposta inválida da API' };
     }
 
-    if (response.status === 401 && endpoint !== '/auth/login') {
+    if (response.status === 401 && !['/auth/login', '/auth/register'].includes(endpoint)) {
       this.setToken(null);
       if (window.app && window.app.handleUnauthorized) window.app.handleUnauthorized();
     }
@@ -67,7 +67,7 @@ class APIClient {
     return result.user;
   }
 
-  async currentUser() { return this.get('/auth/me'); }
+  async register(name, email, password) {\n    const result = await this.request('POST', '/auth/register', { name, email, password });\n    this.setToken(result.access_token || result.token);\n    return result.user;\n  }\n\n  async currentUser() { return this.get('/auth/me'); }
 
   async logout() {
     try {
