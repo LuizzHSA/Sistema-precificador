@@ -63,7 +63,10 @@ def create_app(config_name=None):
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
+    cors_origins = list(app.config["CORS_ORIGINS"])
+    if config_name == "development":
+        cors_origins.append(r"^https://.*-8080\.app\.github\.dev$")
+    CORS(app, origins=cors_origins, supports_credentials=True)
 
     owned_models = (Store, Product, PriceChange, ExecutionLog, AuditEvent)
 
@@ -86,6 +89,8 @@ def create_app(config_name=None):
 
     @app.before_request
     def enforce_rate_limit_and_auth():
+        if request.method == "OPTIONS":
+            return None
         public_paths = {"/", "/health", "/health/ready"}
         if request.path not in public_paths:
             now = time.monotonic()

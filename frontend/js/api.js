@@ -1,7 +1,12 @@
 class APIClient {
   constructor() {
-    const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    const defaultURL = isLocal ? 'http://localhost:5000/api' : '/api';
+    const hostname = window.location.hostname;
+    const isLocal = ['localhost', '127.0.0.1'].includes(hostname);
+    const apiHostname = hostname.replace(/-8080(?=\.|$)/, '-5000');
+    const forwardedAPIURL = apiHostname === hostname
+      ? null
+      : `${window.location.protocol}//${apiHostname}/api`;
+    const defaultURL = isLocal ? 'http://localhost:5000/api' : forwardedAPIURL || '/api';
     if (!isLocal) localStorage.removeItem('apiBaseURL');
     this.baseURL = window.API_BASE_URL || (isLocal ? localStorage.getItem('apiBaseURL') : null) || defaultURL;
   }
@@ -38,6 +43,7 @@ class APIClient {
         method,
         headers,
         body: data === null ? undefined : JSON.stringify(data),
+        credentials: 'include',
       });
     } catch {
       throw { status: 0, message: 'Não foi possível conectar à API. Verifique sua conexão e a URL do backend.' };

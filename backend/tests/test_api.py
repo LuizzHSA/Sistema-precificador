@@ -41,6 +41,20 @@ def test_health_and_auth(client):
     assert client.get("/api/auth/me", headers=headers).status_code == 401
 
 
+def test_codespaces_auth_preflight_is_allowed_in_development():
+    app = create_app("development")
+    origin = "https://example-8080.app.github.dev"
+    with app.test_client() as development_client:
+        response = development_client.options("/api/auth/register", headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        })
+    assert response.status_code == 200
+    assert response.headers["Access-Control-Allow-Origin"] == origin
+    assert "POST" in response.headers["Access-Control-Allow-Methods"]
+
+
 def test_logout_revokes_existing_token_and_requires_new_login(client):
     headers = auth(client)
     assert client.get("/api/auth/me", headers=headers).status_code == 200
