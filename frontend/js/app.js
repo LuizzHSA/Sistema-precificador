@@ -110,10 +110,16 @@ const app = {
   },
 
   async logout() {
-    await api.logout();
-    store.logout();
-    window.location.hash = '#/dashboard';
-    this.showLogin('Você saiu da sua conta.');
+    try {
+      await api.logout();
+    } catch {
+      // A sessão local deve ser encerrada mesmo se a API estiver indisponível.
+    } finally {
+      api.setToken(null);
+      store.logout();
+      window.location.hash = '#/dashboard';
+      this.showLogin('Você saiu da sua conta.');
+    }
   },
 
   handleUnauthorized() {
